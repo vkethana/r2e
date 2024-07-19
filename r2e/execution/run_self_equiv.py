@@ -12,7 +12,8 @@ from r2e.execution.r2e_simulator import DockerSimulator
 from r2e.execution.execute_futs import self_equiv_futs
 from r2e.models import FunctionUnderTest, MethodUnderTest
 from r2e.utils.data import load_functions_under_test, write_functions_under_test
-
+from r2e.models import Tests
+from r2e.models import Function
 
 def get_service(repo_id: str, port: int, image_name: str) -> tuple[DockerSimulator, rpyc.Connection]:
     simulator = DockerSimulator(repo_id=repo_id, port=port, image_name=image_name)
@@ -58,13 +59,28 @@ def run_fut_mp(args: tuple[FunctionUnderTest | MethodUnderTest, str]) -> tuple[b
 
 def run_self_equiv(exec_args: ExecutionArgs):
     futs = load_functions_under_test(TESTGEN_DIR / f"{exec_args.testgen_exp_id}.json")
+    #futs = Tests(tests={})
+    '''
+    for fut in futs:
+       fut.test_history.history = [{}] # << edit this as per the type
+    '''
+    #print(futs)
+    #print(type(futs))
+    #sample_test = Function(function_id="", file="")
+    #futs = Tests(tests={"": "", "": "", "": ""})
+    #print(futs)
+    #print(type(futs))
 
     new_futs = []
+    #image_name = exec_args.image_name
+    image_name = "r2e:jul12"
     if exec_args.execution_multiprocess == 0:
         for fut in futs:
             port = exec_args.port
             try:
-                output = run_fut_with_port(fut, port, exec_args.image_name)
+                #output = run_fut_with_port(fut, port, exec_args.image_name)
+                print("Passing in fut ", fut)
+                output = run_fut_with_port(fut, port, image_name)
             except Exception as e:
                 print(f"Error@{fut.repo_id}:\n{repr(e)}")
                 tb = traceback.format_exc()
@@ -72,10 +88,10 @@ def run_self_equiv(exec_args: ExecutionArgs):
                 continue
             new_futs.append(output[2])
     else:
-
+        #print(1/0)
         outputs = run_tasks_in_parallel_iter(
             run_fut_mp,
-            [(i, exec_args.image_name) for i in futs],
+            [(i, image_name) for i in futs],
             num_workers=exec_args.execution_multiprocess,
             timeout_per_task=exec_args.timeout_per_task,
             use_progress_bar=True,

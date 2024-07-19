@@ -32,15 +32,24 @@ class R2ETestGenerator:
         tasks = R2ETestGenerator.prepare_tasks(functions)
         payloads = [task.chat_messages for task in tasks]
 
-        outputs = LLMCompletions.get_llm_completions(args, payloads)
+        #outputs = LLMCompletions.get_llm_completions(args, payloads)
 
-        results = get_generated_tests(outputs)
+        #results = get_generated_tests(outputs)
         futs = [create_code_under_test(func) for func in functions]
-
+        '''
         for fut, test in zip(futs, results):
             fut.update_history(
                 Tests(
-                    tests={"test_0": test},
+                    tests={"test_0": ""},
+                    gen_model=args.model_name,
+                    gen_date=timestamp(),
+                )
+            )
+        '''
+        for fut in futs:
+            fut.update_history(
+                Tests(
+                    tests={},
                     gen_model=args.model_name,
                     gen_date=timestamp(),
                 )
