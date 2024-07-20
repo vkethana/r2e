@@ -15,7 +15,7 @@ from r2e.utils.data import load_functions_under_test, write_functions_under_test
 from r2e.models import Tests
 from r2e.models import Function
 
-def get_service(repo_id: str, port: int, image_name: str) -> tuple[DockerSimulator, rpyc.Connection]:
+def get_service(repo_id: str, port: int, image_name: str, container) -> tuple[DockerSimulator, rpyc.Connection]:
     simulator = DockerSimulator(repo_id=repo_id, port=port, image_name=image_name)
     try:
         conn = rpyc.connect(
@@ -29,10 +29,10 @@ def get_service(repo_id: str, port: int, image_name: str) -> tuple[DockerSimulat
 
 
 def run_fut_with_port(
-    fut: FunctionUnderTest | MethodUnderTest, port: int, image_name: str
+    fut: FunctionUnderTest | MethodUnderTest, port: int, image_name: str, container
 ) -> tuple[bool, str, FunctionUnderTest | MethodUnderTest]:
     try:
-        simulator, conn = get_service(fut.repo_id, port, image_name)
+        simulator, conn = get_service(fut.repo_id, port, image_name, container)
     except Exception as e:
         print("Service error@", fut.repo_id, repr(e))
         fut.test_history.update_exec_stats({"error": repr(e)})
@@ -47,7 +47,7 @@ def run_fut_with_port(
         conn.close()
 
     fut.test_history.update_exec_stats({"error": tb})
-    print(f"Error@{fut.repo_id}:\n{tb}")
+    #print(f"Error@{fut.repo_id}:\n{tb}")
     return False, tb, fut
 
 def run_fut_mp(args: tuple[FunctionUnderTest | MethodUnderTest, str]) -> tuple[bool, str, FunctionUnderTest | MethodUnderTest]:
@@ -57,7 +57,7 @@ def run_fut_mp(args: tuple[FunctionUnderTest | MethodUnderTest, str]) -> tuple[b
     output = run_fut_with_port(fut, port, image_name)
     return output
 
-def run_self_equiv(exec_args: ExecutionArgs):
+def run_self_equiv(exec_args: ExecutionArgs, container=None):
     futs = load_functions_under_test(TESTGEN_DIR / f"{exec_args.testgen_exp_id}.json")
     #futs = Tests(tests={})
     '''
@@ -72,23 +72,34 @@ def run_self_equiv(exec_args: ExecutionArgs):
     #print(type(futs))
 
     new_futs = []
-    #image_name = exec_args.image_name
-    image_name = "r2e:jul12"
+    image_name = exec_args.image_name
+    #image_name = "r2e:jul12"
     if exec_args.execution_multiprocess == 0:
+        i = 0
         for fut in futs:
+            i += 1
             port = exec_args.port
             try:
                 #output = run_fut_with_port(fut, port, exec_args.image_name)
-                print("Passing in fut ", fut)
-                output = run_fut_with_port(fut, port, image_name)
+                #print("Passing in fut ", fut)
+                output = run_fut_with_port(fut, port, image_name, container)
             except Exception as e:
                 print(f"Error@{fut.repo_id}:\n{repr(e)}")
                 tb = traceback.format_exc()
                 print(tb)
                 continue
+            '''
+            if (output[0]):
+                print(f"Test {i} passed successfully!")
+            else:
+                print(f"ERROR: Test {i} failed!")
+                print("Result of failed test:", output[1])
+            '''
+            #print("Result of FUT, 2: ", output[2]) #output[2] is the raw FUT object, 
+            # which in most cases you dont need to actually see
             new_futs.append(output[2])
     else:
-        #print(1/0)
+        print(1/0) # DONT USE MULTIPROCESSING RN!
         outputs = run_tasks_in_parallel_iter(
             run_fut_mp,
             [(i, image_name) for i in futs],

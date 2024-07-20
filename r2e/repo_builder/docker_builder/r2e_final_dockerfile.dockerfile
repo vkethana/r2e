@@ -22,7 +22,7 @@ RUN curl -sSLO https://pdm-project.org/install-pdm.py \
     && echo 'export PATH=/root/.local/bin:$PATH' >> ~/.bashrc \
     && echo "Installed pdm"
 
-RUN git clone https://github.com/r2e-project/r2e-docker-setup.git /install_code
+RUN git clone https://github.com/vkethana/r2e-docker-setup.git /install_code
 
 COPY . /repos
 
@@ -31,4 +31,6 @@ WORKDIR /install_code
 RUN pip install -r requirements.txt
 
 RUN python3 parallel_installer.py 0 10 10
+
+RUN python3 tests.py
 

@@ -19,19 +19,31 @@ class DockerSimulator:
         repo_id: str = "aider",
         port: int = 3006,
         command: str = "/bin/bash",
+        existing_container=None,
         **docker_kwargs,
     ):
         self.image_name = image_name
         self.repo_id = repo_id
         self.command = command
         self.client = docker.from_env()
-        self.start_container(image_name, command, port, **docker_kwargs)
+        if existing_container:
+            self.container: Container = existing_container
+            try:
+                while self.container.status != "running":
+                    sleep(1)
+                    self.container.reload()
+            except Exception as e:
+                print("Container start error", repr(e))
+                self.stop_container()
+        else:
+            self.start_container(image_name, command, port, **docker_kwargs)
         self.workdir = f"/repos/{repo_id}"
         self.start_server(repo_id, port)
 
     def start_container(
         self, image_name: str, command: str, port: int, **docker_kwargs
     ):
+        #print("Attempting to start container with id=", image_name)
         self.container: Container = self.client.containers.run(  # type: ignore
             image_name,
             command,
@@ -46,7 +58,7 @@ class DockerSimulator:
                 sleep(1)
                 self.container.reload()
         except Exception as e:
-            print("Container start error", repr(e))
+            #print("Container start error", repr(e))
             self.stop_container()
 
     def run_single_command(self, command: str):
@@ -60,8 +72,8 @@ class DockerSimulator:
                 #print(f"{command=} error", output)
                 pass
             else:
-                # print(f"{command=} started")
-                # print(output)
+                #print(f"{command=} started")
+                #print(output)
                 pass
 
         except Exception as e:
