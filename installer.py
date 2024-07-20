@@ -15,21 +15,6 @@ from r2e.execution.execution_args import ExecutionArgs
 openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 client = docker.from_env()
 
-def spinning_cursor():
-    while True:
-        for cursor in '|/-\\':
-            yield cursor
-
-spinner = spinning_cursor()
-
-def spin():
-    while not spin_event.is_set():
-        sys.stdout.write(next(spinner))
-        sys.stdout.flush()
-        time.sleep(0.1)
-        sys.stdout.write('\r')
-        sys.stdout.flush()
-
 def execute_command_with_timeout(container, command, repo_name, timeout=60):
     q = queue.Queue()
     def target():
@@ -38,7 +23,7 @@ def execute_command_with_timeout(container, command, repo_name, timeout=60):
         print()
         print(f"Running command = {bash_command} at path {path}")
         exit_code, output = container.exec_run(bash_command, workdir=path)
-        print(f"Output to command was {output}")
+        #print(f"Output to command was {output}")
         print()
         q.put((exit_code, output))
 
@@ -131,21 +116,20 @@ def llm_suggest_next_command(context, last_command, last_output, oracle_result):
     Oracle result: {oracle_result}
 
     1) Suggest the next command to run in the Docker container to complete the installation process.
-    2) The installation is complete if and only if the Oracle returns "INSTALLATION SUCCESSFUL".
-    3) If the Oracle returns "INSTALLATION SUCCESSFUL", respond with 'INSTALLATION COMPLETE'. Do not output 'INSTALLATION COMPLETE' until the Oracle confirms success.
-    4) You should be running Linux shell-like commands (e.g. "pip install <package>") for the Docker container.
-    5) Important Note: Every command that you run is executed in a separate bash session in the Docker container. If you create any aliases or environment variables, make sure to save them to ~/.bashrc, otherwise the command will have no effect.
-    6) Your response should be a shell command for the Docker container or 'INSTALLATION COMPLETE'.
-    7) Do not suggest running the Oracle directly. The Oracle will be automatically consulted after each command you suggest.
+    2) The repo in question is already partially installed in the Docker container at /repos/{repo_name}. You may assume that you are CDed into this directory automatically. The repo may already contain a `.venv` which you can activate.
+    3) The installation is complete if and only if the Oracle returns "INSTALLATION SUCCESSFUL".
+    4) Important Note: Every shell command that you run is executed in a separate bash session in the Docker container. If you create any aliases or environment variables, make sure to save them to ~/.bashrc, otherwise the command will have no effect.
+    5) Your response should be a shell command for the Docker container or 'RUN ORACLE TESTS'. When you write 'RUN ORACLE TESTS', the Oracle will be consulted to determine if the installation is complete. Submit 'RUN ORACLE TESTS' only when you believe the installation is complete. 'RUN ORACLE TESTS' cannot be run alongside other shell commands.
+    6) Do not attempt to run the Oracle directly, as it is located somewhere that you cannot access. The Oracle will be automatically consulted for you if you say, 'RUN ORACLE TESTS'.
     """
     response = openai_client.chat.completions.create(
         model="gpt-4-turbo",
         messages=[
-            {"role": "system", "content": "You are an AI assistant helping to complete the installation process of a partially-installed repo within a Docker container. Read the following instructions, which will help guide you to suggest the next command to run in the Docker container. Do NOT include any reasoning in your response. Simply include a terminal command to be executed or the words 'INSTALLATION COMPLETE'. Do NOT attempt to format your response in Markdown; for example, do NOT include ``` backticks."},
+            {"role": "system", "content": "You are an AI assistant helping to complete the installation process of a partially-installed repo within a Docker container. Read the following instructions, which will help guide you to suggest the next command to run in the Docker container. Do NOT include any reasoning in your response. Simply include a terminal command to be executed or the words 'RUN ORACLE TESTS'. Do NOT attempt to format your response in Markdown; for example, do NOT include ``` backticks."},
             {"role": "user", "content": msg_content}
         ]
     )
-    return response.choices[0].message.content.strip()
+    return response.choices[0].message.content.strip().replace("```bash", "").replace("`", "").replace("\n", "")
 
 def human_intervention(context, last_command, last_output, oracle_result):
     print("\nRequesting human intervention:")
@@ -158,7 +142,7 @@ def human_intervention(context, last_command, last_output, oracle_result):
 def complete_installation(image_name, repo_name):
     container = client.containers.run(
         image_name,
-        command="bash",
+        command="/bin/bash",
         stdin_open=True,
         tty=True,
         detach=True
@@ -171,58 +155,42 @@ def complete_installation(image_name, repo_name):
         oracle_result = "Not yet consulted"
 
         while True:
-            print("Thinking of command to run...")
-            global spin_event
-            spin_event = threading.Event()
-            spinner_thread = threading.Thread(target=spin)
-            spinner_thread.start()
-            
             print("Asking LLM for next command...")
             next_command = llm_suggest_next_command(context, last_command, last_output, oracle_result)
-            #next_command = "ls"
             print(f"Result: {next_command}")
-            spin_event.set()
-            spinner_thread.join()
 
-            if next_command == "INSTALLATION COMPLETE":
-                print("Installation process finished successfully")
-                break
+            if next_command == "RUN ORACLE TESTS":
+                print("Consulting the Oracle...")
+                oracle_result, message = installation_oracle(container)
+                print(f"Oracle result: {oracle_result}")
+                last_command = next_command
+                last_output = "N/A; Oracle was consulted"
 
-            print(f"Executing the following command in the container: {next_command}")
-            spin_event = threading.Event()
-            spinner_thread = threading.Thread(target=spin)
-            spinner_thread.start()
+                if oracle_result:
+                    print("Installation completed successfully according to the Oracle.")
+                    break
 
-            exit_code, output = execute_command_with_timeout(container, next_command, repo_name)
-
-            spin_event.set()
-            spinner_thread.join()
-
-            if exit_code != 0:
-                print(f"Command failed with exit code {exit_code}")
-                print(f"Output: {output}")
-                if exit_code == -1 or "critical error" in output.lower():
-                    human_command = human_intervention(context, next_command, output, oracle_result)
-                    if human_command.upper() == 'ABORT':
-                        print("Installation aborted by human intervention")
-                        break
-                    next_command = human_command
             else:
-                print(f"Output: {output}")
-                print("Command was executed successfully.")
+                exit_code, output = execute_command_with_timeout(container, next_command, repo_name)
 
-            last_command = next_command
-            last_output = output
+                if exit_code != 0:
+                    print(f"Command failed with exit code {exit_code}")
+                    print(f"Output: {output}")
+                    if exit_code == -1 or "critical error" in output.lower():
+                        human_command = human_intervention(context, next_command, output, oracle_result)
+                        if human_command.upper() == 'ABORT':
+                            print("Installation aborted by human intervention")
+                            break
+                        next_command = human_command
+                else:
+                    print(f"Output: {output}")
+                    print("Command was executed successfully.")
 
-            print("Consulting the Oracle...")
-            oracle_result, message = installation_oracle(container)
-            print(f"Oracle result: {oracle_result}")
+                last_command = next_command
+                last_output = output
+                message = "N/A; Oracle was not consulted in previous round"
 
             context += f"\nExecuted: {last_command}\nResult: {last_output}\nOracle: {message}"
-
-            if oracle_result:
-                print("Installation completed successfully according to the Oracle.")
-                break
 
             cont = input("Press Enter to continue the installation or 'q' to quit: ")
             if cont.lower() == 'q':
