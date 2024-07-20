@@ -19,24 +19,13 @@ class DockerSimulator:
         repo_id: str = "aider",
         port: int = 3006,
         command: str = "/bin/bash",
-        existing_container=None,
         **docker_kwargs,
     ):
         self.image_name = image_name
         self.repo_id = repo_id
         self.command = command
         self.client = docker.from_env()
-        if existing_container:
-            self.container: Container = existing_container
-            try:
-                while self.container.status != "running":
-                    sleep(1)
-                    self.container.reload()
-            except Exception as e:
-                print("Container start error", repr(e))
-                self.stop_container()
-        else:
-            self.start_container(image_name, command, port, **docker_kwargs)
+        self.start_container(image_name, command, port, **docker_kwargs)
         self.workdir = f"/repos/{repo_id}"
         self.start_server(repo_id, port)
 
@@ -62,24 +51,26 @@ class DockerSimulator:
             self.stop_container()
 
     def run_single_command(self, command: str):
+        output = ""
         try:
             exit_code, output = self.container.exec_run(
                 command,
-                workdir=self.workdir,
-                # timeout=60,
+                workdir=self.workdir
+                #timeout=100,
             )
             if exit_code != 0:
-                #print(f"{command=} error", output)
+                print(f"{command=} error", output)
                 pass
             else:
-                #print(f"{command=} started")
-                #print(output)
+                print(f"{command=} started")
+                print(output)
                 pass
+            return exit_code, output
 
         except Exception as e:
-            # print(f"{command=}@{self.workdir=} start error", repr(e)[:20])
+            print(f"{command=}@{self.workdir=} start error", repr(e))
             self.stop_container()
-        return
+        return -1, "ERROR: Failed to execute command inside Docker container"
 
     def start_server(self, repo_id: str, port: int):
         # self.run_single_command("pip install pipreqs")
@@ -88,12 +79,14 @@ class DockerSimulator:
         # )
         # self.run_single_command(".venv/bin/python -m pip install -r new_reqs.txt")
 
+        print("Running R2E test server...")
         command = f"bash -c \
             'source .venv/bin/activate && ls && \
             r2e-test-server start --port {port} &\
             '"
 
-        self.run_single_command(command)
+        exit_code, output = self.run_single_command(command)
+        print(f"Finished running R2E test server with exit code {exit_code} and output {output}...")
 
         # try:
         #     exit_code, output = self.container.exec_run(

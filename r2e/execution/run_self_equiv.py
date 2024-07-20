@@ -15,6 +15,7 @@ from r2e.utils.data import load_functions_under_test, write_functions_under_test
 from r2e.models import Tests
 from r2e.models import Function
 
+'''
 def get_service(repo_id: str, port: int, image_name: str, container) -> tuple[DockerSimulator, rpyc.Connection]:
     simulator = DockerSimulator(repo_id=repo_id, port=port, image_name=image_name)
     try:
@@ -26,17 +27,20 @@ def get_service(repo_id: str, port: int, image_name: str, container) -> tuple[Do
         simulator.stop_container()
         raise e
     return simulator, conn
+'''
 
 
 def run_fut_with_port(
-    fut: FunctionUnderTest | MethodUnderTest, port: int, image_name: str, container
+    fut: FunctionUnderTest | MethodUnderTest, port: int, simulator, conn
 ) -> tuple[bool, str, FunctionUnderTest | MethodUnderTest]:
+    '''
     try:
         simulator, conn = get_service(fut.repo_id, port, image_name, container)
     except Exception as e:
         print("Service error@", fut.repo_id, repr(e))
         fut.test_history.update_exec_stats({"error": repr(e)})
         return False, repr(e), fut
+    '''
     try:
         return self_equiv_futs([fut], conn)
     except Exception as e:
@@ -51,13 +55,16 @@ def run_fut_with_port(
     return False, tb, fut
 
 def run_fut_mp(args: tuple[FunctionUnderTest | MethodUnderTest, str]) -> tuple[bool, str, FunctionUnderTest | MethodUnderTest]:
+    print("ERROR: DEPRECATED FOR NOW")
+    return
+
     fut, image_name = args
     ## TODO: selected a random port, can collide with other processes!
     port = random.randint(3000, 10000)
     output = run_fut_with_port(fut, port, image_name)
     return output
 
-def run_self_equiv(exec_args: ExecutionArgs, container=None):
+def run_self_equiv(exec_args: ExecutionArgs, simulator=None, conn=None):
     futs = load_functions_under_test(TESTGEN_DIR / f"{exec_args.testgen_exp_id}.json")
     #futs = Tests(tests={})
     '''
@@ -82,7 +89,7 @@ def run_self_equiv(exec_args: ExecutionArgs, container=None):
             try:
                 #output = run_fut_with_port(fut, port, exec_args.image_name)
                 #print("Passing in fut ", fut)
-                output = run_fut_with_port(fut, port, image_name, container)
+                output = run_fut_with_port(fut, port, simulator, conn)
             except Exception as e:
                 print(f"Error@{fut.repo_id}:\n{repr(e)}")
                 tb = traceback.format_exc()
@@ -120,4 +127,5 @@ def run_self_equiv(exec_args: ExecutionArgs, container=None):
 if __name__ == "__main__":
     exec_args = fire.Fire(ExecutionArgs)
     EXECUTION_DIR.mkdir(parents=True, exist_ok=True)
-    run_self_equiv(exec_args)
+    #run_self_equiv(exec_args)
+    print("You can't run this file directly anymore. Sorry.")

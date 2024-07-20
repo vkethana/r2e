@@ -8,33 +8,16 @@ import time
 import subprocess
 from openai import OpenAI
 import json
+import rpyc
+import random
 
 from r2e.execution.run_self_equiv import run_self_equiv
 from r2e.execution.execution_args import ExecutionArgs
+from r2e.execution.r2e_simulator import DockerSimulator
+from r2e.execution.execute_futs import self_equiv_futs
 
 openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 client = docker.from_env()
-
-def execute_command_with_timeout(container, command, repo_name, timeout=60):
-    q = queue.Queue()
-    def target():
-        bash_command = f"bash -c {shlex.quote(command)}"
-        path = '/repos' + '/' + repo_name
-        print()
-        print(f"Running command = {bash_command} at path {path}")
-        exit_code, output = container.exec_run(bash_command, workdir=path)
-        #print(f"Output to command was {output}")
-        print()
-        q.put((exit_code, output))
-
-    thread = threading.Thread(target=target)
-    thread.start()
-    try:
-        exit_code, output = q.get(timeout=timeout)
-        return exit_code, output.decode('utf-8')
-    except queue.Empty:
-        return -1, "Command timed out"
-
 
 def check_execution_status(execution_output_path="/home/vkethana/buckets/r2e_bucket/testgen/temp_generate_out.json"):
     # Read the JSON output file
@@ -71,7 +54,7 @@ def check_execution_status(execution_output_path="/home/vkethana/buckets/r2e_buc
     print("WARNING: NO ERROR OR SUCCESS MESSAGES FOUND")
     return False, "No error or success messages found"
 
-def installation_oracle(container):
+def installation_oracle(simulator, conn):
     # This function abstracts the verification command
 
     exec_args = ExecutionArgs(
@@ -82,7 +65,7 @@ def installation_oracle(container):
 
     print(f"Running Oracle self-equivalence test...")
     # Run the self_equiv function
-    run_self_equiv(exec_args, container)
+    run_self_equiv(exec_args, simulator, conn)
 
     # This file contains the output of the execution
     #command = f"python r2e/execution/run_self_equiv.py --testgen_exp_id temp_generate --image_name {image_name} --execution_multiprocess 0"
@@ -91,18 +74,6 @@ def installation_oracle(container):
         success, message = check_execution_status("/home/vkethana/buckets/r2e_bucket/testgen/temp_generate_out.json")
         print(success, message)
         return success, message
-        '''
-        #process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
-
-        # Display output in real-time
-        full_output = ""
-        for line in process.stdout:
-            print(line, end='')  # Print each line as it's produced
-            full_output += line
-
-        # Wait for the process to complete and get the return code
-        return_code = process.wait()
-        '''
 
     except Exception as e:
         print(f"\nOracle result: ERROR; Exception: {e}")
@@ -115,12 +86,13 @@ def llm_suggest_next_command(context, last_command, last_output, oracle_result):
     Output/Error: {last_output}
     Oracle result: {oracle_result}
 
-    1) Suggest the next command to run in the Docker container to complete the installation process.
-    2) The repo in question is already partially installed in the Docker container at /repos/{repo_name}. You may assume that you are CDed into this directory automatically. The repo may already contain a `.venv` which you can activate.
-    3) The installation is complete if and only if the Oracle returns "INSTALLATION SUCCESSFUL".
-    4) Important Note: Every shell command that you run is executed in a separate bash session in the Docker container. If you create any aliases or environment variables, make sure to save them to ~/.bashrc, otherwise the command will have no effect.
-    5) Your response should be a shell command for the Docker container or 'RUN ORACLE TESTS'. When you write 'RUN ORACLE TESTS', the Oracle will be consulted to determine if the installation is complete. Submit 'RUN ORACLE TESTS' only when you believe the installation is complete. 'RUN ORACLE TESTS' cannot be run alongside other shell commands.
-    6) Do not attempt to run the Oracle directly, as it is located somewhere that you cannot access. The Oracle will be automatically consulted for you if you say, 'RUN ORACLE TESTS'.
+    - Suggest the next command to run in the Docker container to complete the installation process.
+    - The repo in question is already partially installed in the Docker container at /repos/{repo_name}. You may assume that you are CDed into this directory automatically.
+    - The repo has a partially installed virtual environment at `.venv`; you may assume that the virtual environment is already activated.
+    - The installation is complete if and only if the Oracle returns "INSTALLATION SUCCESSFUL".
+    - Important Note: Every shell command that you run is executed in a separate bash session in the Docker container. If you create any aliases or environment variables, make sure to save them to ~/.bashrc, otherwise the command will have no effect.
+    - Your response should be a shell command for the Docker container or 'RUN ORACLE TESTS'. When you write 'RUN ORACLE TESTS', the Oracle will be consulted to determine if the installation is complete. Submit 'RUN ORACLE TESTS' only when you believe the installation is complete. 'RUN ORACLE TESTS' cannot be run alongside other shell commands.
+    - Do not attempt to run the Oracle directly, as it is located somewhere that you cannot access. The Oracle will be automatically consulted for you if you say, 'RUN ORACLE TESTS'.
     """
     response = openai_client.chat.completions.create(
         model="gpt-4-turbo",
@@ -139,15 +111,7 @@ def human_intervention(context, last_command, last_output, oracle_result):
     print(f"Oracle result: {oracle_result}")
     return input("Please suggest the next command for the Docker container (or type 'ABORT'): ")
 
-def complete_installation(image_name, repo_name):
-    container = client.containers.run(
-        image_name,
-        command="/bin/bash",
-        stdin_open=True,
-        tty=True,
-        detach=True
-    )
-
+def complete_installation(image_name, repo_name, simulator, conn):
     try:
         context = f"Docker image: {image_name}. Partially-installed repo can be found at: /repos/{repo_name}"
         last_command = "Initial setup"
@@ -160,8 +124,9 @@ def complete_installation(image_name, repo_name):
             print(f"Result: {next_command}")
 
             if next_command == "RUN ORACLE TESTS":
+                #  CASE 1: Run the Oracle
                 print("Consulting the Oracle...")
-                oracle_result, message = installation_oracle(container)
+                oracle_result, message = installation_oracle(simulator, conn)
                 print(f"Oracle result: {oracle_result}")
                 last_command = next_command
                 last_output = "N/A; Oracle was consulted"
@@ -171,7 +136,11 @@ def complete_installation(image_name, repo_name):
                     break
 
             else:
-                exit_code, output = execute_command_with_timeout(container, next_command, repo_name)
+                # CASE 2: Run the suggested command
+                bash_command = "source .venv/bin/activate && " + next_command
+                bash_command = f"bash -c {shlex.quote(bash_command)}"
+                exit_code, output = simulator.run_single_command(bash_command)
+                output = str(output)
 
                 if exit_code != 0:
                     print(f"Command failed with exit code {exit_code}")
@@ -198,8 +167,32 @@ def complete_installation(image_name, repo_name):
                 break
 
     finally:
-        container.stop()
-        container.remove()
+        simulator.stop_container()
+
+'''
+The below two methods are used to instantiate the docker container and rpyc connection
+'''
+def get_service(repo_id: str, port: int, image_name: str) -> tuple[DockerSimulator, rpyc.Connection]:
+    simulator = DockerSimulator(repo_id=repo_id, port=port, image_name=image_name)
+    print("Simulatr created successfully")
+    try:
+        conn = rpyc.connect(
+            "localhost", port, keepalive=True, config={"sync_request_timeout": 180}
+        )
+    except Exception as e:
+        print(f"Connection error -- {repo_id} -- {repr(e)}")
+        simulator.stop_container()
+        raise e
+    return simulator, conn
+
+def init_docker(repo_name, image_name):
+    port = random.randint(3000, 10000) # Random port
+    try:
+        simulator, conn = get_service(repo_name, port, image_name)
+        return simulator, conn
+    except Exception as e:
+        print(f"Service error -- {repo_name} -- {repr(e)}")
+        raise e
 
 if __name__ == "__main__":
     #url = ""
@@ -207,4 +200,5 @@ if __name__ == "__main__":
     #repo_name = input("Enter the repo name: ")
     image_name = "r2e:placeholder3"
     repo_name = "bad-repo-2"
-    complete_installation(image_name, repo_name)
+    simulator, conn = init_docker(repo_name, image_name)
+    complete_installation(image_name, repo_name, simulator, conn)
