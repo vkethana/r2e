@@ -59,16 +59,16 @@ class DockerSimulator:
                 #timeout=100,
             )
             if exit_code != 0:
-                print(f"{command=} error", output)
+                #print(f"{command=} error", output)
                 pass
             else:
-                print(f"{command=} started")
-                print(output)
+                #print(f"{command=} started")
+                #print(output)
                 pass
             return exit_code, output
 
         except Exception as e:
-            print(f"{command=}@{self.workdir=} start error", repr(e))
+            print(f"Start Error detected; Command = {command=}, Workdir={self.workdir=}. Error Message:", repr(e))
             self.stop_container()
         return -1, "ERROR: Failed to execute command inside Docker container"
 
@@ -79,14 +79,14 @@ class DockerSimulator:
         # )
         # self.run_single_command(".venv/bin/python -m pip install -r new_reqs.txt")
 
-        print("Running R2E test server...")
+        #print("Running R2E test server...")
         command = f"bash -c \
             'source .venv/bin/activate && ls && \
             r2e-test-server start --port {port} &\
             '"
 
         exit_code, output = self.run_single_command(command)
-        print(f"Finished running R2E test server with exit code {exit_code} and output {output}...")
+        #print(f"Finished running R2E test server with exit code {exit_code} and output {output}...")
 
         # try:
         #     exit_code, output = self.container.exec_run(

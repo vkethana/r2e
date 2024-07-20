@@ -119,9 +119,11 @@ def complete_installation(image_name, repo_name, simulator, conn):
         oracle_result = "Not yet consulted"
 
         while True:
+            print("*" * 50)
             print("Asking LLM for next command...")
             next_command = llm_suggest_next_command(context, last_command, last_output, oracle_result)
-            print(f"Result: {next_command}")
+            # Put the color in green
+            print(f"\033[92mSuggested command: {next_command}\033[0m")
 
             if next_command == "RUN ORACLE TESTS":
                 #  CASE 1: Run the Oracle
