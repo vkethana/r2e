@@ -18,9 +18,11 @@ ENV PATH="/opt/anaconda/bin:${PATH}"
 
 RUN curl -sSLO https://pdm-project.org/install-pdm.py \
     && curl -sSL https://pdm-project.org/install-pdm.py.sha256 | shasum -a 256 -c - \
-    && python3.11 install-pdm.py -v 2.16.0 \
+    && python3.11 install-pdm.py \
     && echo 'export PATH=/root/.local/bin:$PATH' >> ~/.bashrc \
     && echo "Installed pdm"
 
-RUN git clone https://github.com/vkethana/r2e-docker-setup.git /install_code
+ADD https://api.github.com/repos/vkethana/r2e-docker-setup/git/refs/heads/pdm-fix version.json 
+
+RUN git clone -b pdm-fix https://github.com/vkethana/r2e-docker-setup.git /install_code
 
