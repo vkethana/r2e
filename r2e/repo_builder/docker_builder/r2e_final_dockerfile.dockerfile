@@ -30,7 +30,7 @@ WORKDIR /install_code
 
 RUN pip install -r requirements.txt
 
-RUN python3 parallel_installer.py 0 10 10
+RUN python3 parallel_installer.py 0 1 1
 
 RUN python3 tests.py
 

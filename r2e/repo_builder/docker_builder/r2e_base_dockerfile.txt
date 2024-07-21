@@ -18,7 +18,7 @@ ENV PATH="/opt/anaconda/bin:${PATH}"
 
 RUN curl -sSLO https://pdm-project.org/install-pdm.py \
     && curl -sSL https://pdm-project.org/install-pdm.py.sha256 | shasum -a 256 -c - \
-    && python3.11 install-pdm.py \
+    && python3.11 install-pdm.py -v 2.16.0 \
     && echo 'export PATH=/root/.local/bin:$PATH' >> ~/.bashrc \
     && echo "Installed pdm"
 

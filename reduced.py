@@ -16,8 +16,6 @@ from r2e.execution.execution_args import ExecutionArgs
 from r2e.execution.r2e_simulator import DockerSimulator
 from r2e.execution.execute_futs import self_equiv_futs
 
-from setup_installer import setup_repo, setup_container
-
 openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 client = docker.from_env()
 
@@ -120,17 +118,23 @@ def complete_installation(image_name, repo_name, simulator, conn):
         last_output = "Container created"
         oracle_result = "Not yet consulted"
 
+        i  = 0
         while True:
+            i += 1
             print("*" * 50)
             print("Asking LLM for next command...")
-            next_command = llm_suggest_next_command(context, last_command, last_output, oracle_result)
-            # Put the color in green
+            filename = str(random.randint(0, 100)) + ".txt"
+            next_command = "pip install numpy"
+            if (i >= 2):
+                next_command = "RUN ORACLE TESTS"
+            # Put the color in green 
             print(f"\033[92mSuggested command: {next_command}\033[0m")
 
             if next_command == "RUN ORACLE TESTS":
                 #  CASE 1: Run the Oracle
                 print("Consulting the Oracle...")
                 oracle_result, message = installation_oracle(simulator, conn)
+                #oracle_result, message = True, ""
                 print(f"Oracle result: {oracle_result}")
                 last_command = next_command
                 last_output = "N/A; Oracle was consulted"
@@ -145,11 +149,13 @@ def complete_installation(image_name, repo_name, simulator, conn):
                 bash_command = f"bash -c {shlex.quote(bash_command)}"
                 exit_code, output = simulator.run_single_command(bash_command)
                 output = str(output)
+                #exit_code, output = 0, "Success"
 
                 if exit_code != 0:
                     print(f"Command failed with exit code {exit_code}")
                     print(f"Output: {output}")
                     if exit_code == -1 or "critical error" in output.lower():
+                        print("Critical error detected: Requesting human intervention")
                         human_command = human_intervention(context, next_command, output, oracle_result)
                         if human_command.upper() == 'ABORT':
                             print("Installation aborted by human intervention")
@@ -171,6 +177,7 @@ def complete_installation(image_name, repo_name, simulator, conn):
                 break
 
     finally:
+        print("Stopping simulator...")
         simulator.stop_container()
 
 '''
@@ -199,12 +206,23 @@ def init_docker(repo_name, image_name):
         raise e
 
 if __name__ == "__main__":
-    url = "https://github.com/psf/requests"
-    #setup_container()
-    image_name = "r2e:temp"
-    repo_name = url.split("/")[-1]
-    repo_author = url.split("/")[-2]
-    repo_id = repo_author + "___" + repo_name
+    image_name = "r2e:placeholder3"
+    repo_name = "bad-repo-2"
+    simulator, conn = init_docker(repo_name, image_name)
 
-    simulator, conn = init_docker(repo_id, image_name)
-    complete_installation(image_name, repo_name, simulator, conn)
+    #bash_command = "ls -a"
+    #bash_command = f"bash -c {shlex.quote(bash_command)}"
+    #print(simulator.run_single_command(bash_command))
+
+    # Add some random environment variable and echo it to bashrc
+    bash_command = "printenv && echo 'export MY_TEST_ENV_VAR=123' >> ~/.bashrc && source ~/.bashrc"
+    bash_command = f"bash -c {shlex.quote(bash_command)}"
+    print(simulator.run_single_command(bash_command))
+
+    bash_command = "printenv && ls"
+    bash_command = f"bash -c {shlex.quote(bash_command)}"
+    print(simulator.run_single_command(bash_command))
+
+    #complete_installation(image_name, repo_name, simulator, conn)
+    #installation_oracle(simulator, conn)
+    #installation_oracle(simulator, conn)

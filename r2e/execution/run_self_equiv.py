@@ -47,8 +47,9 @@ def run_fut_with_port(
         tb = traceback.format_exc()
         pass
     finally:
-        simulator.stop_container()
-        conn.close()
+        #simulator.stop_container()
+        #conn.close()
+        pass
 
     fut.test_history.update_exec_stats({"error": tb})
     #print(f"Error@{fut.repo_id}:\n{tb}")
@@ -65,6 +66,7 @@ def run_fut_mp(args: tuple[FunctionUnderTest | MethodUnderTest, str]) -> tuple[b
     return output
 
 def run_self_equiv(exec_args: ExecutionArgs, simulator=None, conn=None):
+    assert (simulator != None)
     futs = load_functions_under_test(TESTGEN_DIR / f"{exec_args.testgen_exp_id}.json")
     #futs = Tests(tests={})
     '''
