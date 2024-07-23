@@ -17,7 +17,8 @@ def clear_repos_folder():
         elif os.path.isdir(item_path):
             confirm = input(f"Delete {item_path}? (y/n): ")
             if confirm.lower() == 'y':
-                os.rmdir(item_path)
+                # Delete the whole directory
+                os.system(f"rm -rf {item_path}")
 
 def clone_repos(url):
     # Clone the relevant repos from a list
@@ -60,14 +61,25 @@ def setup_repo(url):
     reduce_data()
     make_equiv_test()
 
-def setup_container():
+def setup_container(image_name):
     # TODO Throw an error if either process doesn't succeed
-    command = "cd /home/vkethana/r2e && python r2e/repo_builder/docker_builder/r2e_dockerfile_builder.py  --install_batch_size 1"
-    os.system(command)
+    os.system("cd /home/vkethana/r2e && python r2e/repo_builder/docker_builder/r2e_dockerfile_builder.py  --install_batch_size 1")
 
-    command="cd ~/buckets/local_repoeval_bucket/repos && docker build -t r2e:temp -f /home/vkethana/r2e/r2e/repo_builder/docker_builder/r2e_final_dockerfile.dockerfile ."
-    os.system(command)
+    os.system(f"cd ~/buckets/local_repoeval_bucket/repos && docker build -t {image_name} -f /home/vkethana/r2e/r2e/repo_builder/docker_builder/r2e_final_dockerfile.dockerfile .")
+
+    # first make the relevant directory if it doesn't exist
+    #os.system(f"mkdir -p ~/buckets/local_repoeval_bucket/install_logs/{image_name}")
+    # enter the image in interactive mode, which has name image_name, and run cat /install_code/install_logs/* 
+    
+    # use -it to run the container in interactive mode
+    
+    # to get the logs of the installation process
+    # use --rm to remove the container after running it
+
+    #os.system(f"docker run --rm {image_name} cat /install_code/install_logs/* > ~/buckets/local_repoeval_bucket/install_logs/{image_name}/install_log.txt")
+    #os.system(f"docker run -it --rm {image_name} cat /install_code/install_logs/* > ~/buckets/local_repoeval_bucket/install_logs/{image_name}/install_log.txt")
+    #os.system(f"docker run -it --rm {image_name} cat /install_code/install_logs/*.log")
 
 if __name__ == "__main__":
     # Assume repo has already been cloned
-    setup_repo("https://github.com/psf/requests")
+    print("Run installer.py to test this file")

@@ -22,8 +22,9 @@ RUN curl -sSLO https://pdm-project.org/install-pdm.py \
     && echo 'export PATH=/root/.local/bin:$PATH' >> ~/.bashrc \
     && echo "Installed pdm"
 
-RUN git clone https://github.com/vkethana/r2e-docker-setup.git /install_code
+ADD https://api.github.com/repos/vkethana/r2e-docker-setup/git/refs/heads/main version.json 
 
+RUN git clone https://github.com/vkethana/r2e-docker-setup.git /install_code
 COPY . /repos
 
 WORKDIR /install_code
