@@ -232,8 +232,8 @@ def install_repo(url):
     repo_id = repo_author + "___" + repo_name
     image_name = "r2e:temp_" + repo_name
 
-    #setup_repo(url)
-    #setup_container(image_name)
+    setup_repo(url)
+    setup_container(image_name)
 
     simulator, conn = init_docker(repo_id, image_name)
     agentic_loop(image_name, repo_name, simulator, conn)
