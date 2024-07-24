@@ -22,7 +22,7 @@ from r2e.paths import R2E_BUCKET_DIR
 openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 client = docker.from_env()
 
-def write_failure_mode(command, output):
+def write_failure_mode(image_name, command, output):
     # Write this to failures/<image_name>_failures.json
     # Check to see if the failures directory exists
 
@@ -43,7 +43,7 @@ def write_failure_mode(command, output):
                 "output": output
             }) + "\n")
 
-def check_execution_status(execution_output_path = R2E_BUCKET_DIR + "/testgen/temp_generate_out.json"):
+def check_execution_status(execution_output_path = str(R2E_BUCKET_DIR) + "/testgen/temp_generate_out.json"):
     # Read the JSON output file
     with open(execution_output_path, "r") as f:
         output = json.load(f)
@@ -166,11 +166,11 @@ def agentic_loop(image_name, repo_name, simulator, conn):
                     print("Installation completed successfully according to the Oracle.")
                     break
                 else:
-                    write_failure_mode("RUN ORACLE", image_name, output)
+                    write_failure_mode(image_name, "RUN ORACLE", output)
             else:
                 #num_consecutive_failures = 0
                 # CASE 2: Run the suggested command
-                bash_command = "printenv && source .venv/bin/activate && " + next_command
+                bash_command = "source .venv/bin/activate && " + next_command
                 bash_command = f"bash -c {shlex.quote(bash_command)}"
                 exit_code, output = simulator.run_single_command(bash_command)
                 output = output.decode('utf-8')
@@ -183,7 +183,7 @@ def agentic_loop(image_name, repo_name, simulator, conn):
                     print("*" * 50)
 
                     # Write this to failures/<image_name>_failures.json
-                    write_failure_mode(bash_command, image_name, output)
+                    write_failure_mode(image_name, bash_command, output)
 
                     if exit_code == -1 or "critical error" in output.lower():
                         human_command = human_intervention(context, next_command, output, oracle_result)
@@ -243,7 +243,7 @@ def install_repo(url):
     repo_id = repo_author + "___" + repo_name
     image_name = "r2e:temp_" + repo_name
 
-    setup_repo(url)
+    #setup_repo(url)
     setup_container(image_name)
 
     simulator, conn = init_docker(repo_id, image_name)

@@ -4,7 +4,7 @@ import random
 
 from r2e.paths import HOME_DIR
 
-R2E_REPO = HOME_DIR / "/r2e"
+R2E_REPO = HOME_DIR / "r2e"
 
 def clear_repos_folder():
     # Check if there are any files or folders in ~/buckets/local_repoeval_bucket/repos
@@ -67,9 +67,9 @@ def setup_repo(url):
 
 def setup_test_container(image_name="r2e:interactive_partial_install"):
     clone_repos("https://github.com/psf/requests")
-    print("IMPORTANT: MAKE SURE YOUR R2E INSTALL IS LOCATED AT /home/<username>/r2e")
-    print("IMPORTANT: MAKE SURE YOUR R2E INSTALL IS LOCATED AT /home/<username>/r2e")
-    print("IMPORTANT: MAKE SURE YOUR R2E INSTALL IS LOCATED AT /home/<username>/r2e")
+    print("IMPORTANT: MAKE SURE YOUR R2E INSTALL IS LOCATED AT ~/r2e")
+    print("IMPORTANT: MAKE SURE YOUR R2E INSTALL IS LOCATED AT ~/r2e")
+    print("IMPORTANT: MAKE SURE YOUR R2E INSTALL IS LOCATED AT ~/r2e")
     #ans = input("Have you configured your R2E install to be located at /home/<username>/r2e? (y/n)")
 
     dockerfile_path = R2E_REPO + " r2e/repo_builder/docker_builder/base_dockerfile.dockerfile"
@@ -84,4 +84,4 @@ def setup_container(image_name):
 if __name__ == "__main__":
     # Assume repo has already been cloned
     #setup_test_container()
-    #print("Run installer.py to test this file")
+    print("Run installer.py to test this file")
