@@ -16,10 +16,34 @@ from r2e.execution.execution_args import ExecutionArgs
 from r2e.execution.r2e_simulator import DockerSimulator
 from r2e.execution.execute_futs import self_equiv_futs
 
+from setup_installer import setup_repo, setup_container
+from r2e.paths import R2E_BUCKET_DIR
+
 openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 client = docker.from_env()
 
-def check_execution_status(execution_output_path="/home/vkethana/buckets/r2e_bucket/testgen/temp_generate_out.json"):
+def write_failure_mode(image_name, command, output):
+    # Write this to failures/<image_name>_failures.json
+    # Check to see if the failures directory exists
+
+    if not os.path.exists("failures"):
+        os.makedirs("failures")
+
+    # Check if the file is already present in the failures directory
+    if not os.path.exists(f"{image_name}_failures.json"):
+        with open(f"failures/{image_name}_failures.json", "w") as f:
+            f.write(json.dumps({
+                "command": command,
+                "output": output
+            }) + "\n")
+    else:
+        with open(f"failures/{image_name}_failures.json", "a") as f:
+            f.write(json.dumps({
+                "command": bash_command,
+                "output": output
+            }) + "\n")
+
+def check_execution_status(execution_output_path = str(R2E_BUCKET_DIR) + "/testgen/temp_generate_out.json"):
     # Read the JSON output file
     with open(execution_output_path, "r") as f:
         output = json.load(f)
@@ -71,7 +95,7 @@ def installation_oracle(simulator, conn):
     #command = f"python r2e/execution/run_self_equiv.py --testgen_exp_id temp_generate --image_name {image_name} --execution_multiprocess 0"
     try:
         print(f"Checking execution status...")
-        success, message = check_execution_status("/home/vkethana/buckets/r2e_bucket/testgen/temp_generate_out.json")
+        success, message = check_execution_status()
         print(success, message)
         return success, message
 
@@ -87,17 +111,17 @@ def llm_suggest_next_command(context, last_command, last_output, oracle_result):
     Oracle result: {oracle_result}
 
     - Suggest the next command to run in the Docker container to complete the installation process.
-    - The repo in question is already partially installed in the Docker container at /repos/{repo_name}. You may assume that you are CDed into this directory automatically.
+    - The repo in question is already partially installed in the Docker container at /repos/(name_of_repo). You may assume that you are CDed into this directory automatically.
     - The repo has a partially installed virtual environment at `.venv`; you may assume that the virtual environment is already activated.
     - The installation is complete if and only if the Oracle returns "INSTALLATION SUCCESSFUL".
     - Important Note: Every shell command that you run is executed in a separate bash session in the Docker container. If you create any aliases or environment variables, make sure to save them to ~/.bashrc, otherwise the command will have no effect.
-    - Your response should be a shell command for the Docker container or 'RUN ORACLE TESTS'. When you write 'RUN ORACLE TESTS', the Oracle will be consulted to determine if the installation is complete. Submit 'RUN ORACLE TESTS' only when you believe the installation is complete. 'RUN ORACLE TESTS' cannot be run alongside other shell commands.
-    - Do not attempt to run the Oracle directly, as it is located somewhere that you cannot access. The Oracle will be automatically consulted for you if you say, 'RUN ORACLE TESTS'.
+    - Your response should be a shell command for the Docker container or 'RUN ORACLE'. When you write 'RUN ORACLE', the Oracle will be consulted to determine if the installation is complete. Submit 'RUN ORACLE' only when you believe the installation is complete. 'RUN ORACLE' cannot be run alongside other shell commands.
+    - Do not attempt to run the Oracle directly, as it is located somewhere that you cannot access. The Oracle will be automatically consulted for you if you say, 'RUN ORACLE'.
     """
     response = openai_client.chat.completions.create(
         model="gpt-4-turbo",
         messages=[
-            {"role": "system", "content": "You are an AI assistant helping to complete the installation process of a partially-installed repo within a Docker container. Read the following instructions, which will help guide you to suggest the next command to run in the Docker container. Do NOT include any reasoning in your response. Simply include a terminal command to be executed or the words 'RUN ORACLE TESTS'. Do NOT attempt to format your response in Markdown; for example, do NOT include ``` backticks."},
+            {"role": "system", "content": "You are an AI assistant helping to complete the installation process of a partially-installed repo within a Docker container. Read the following instructions, which will help guide you to suggest the next command to run in the Docker container. Do NOT include any reasoning in your response. Simply include a terminal command to be executed or the words 'RUN ORACLE'. Do NOT attempt to format your response in Markdown; for example, do NOT include ``` backticks."},
             {"role": "user", "content": msg_content}
         ]
     )
@@ -111,30 +135,29 @@ def human_intervention(context, last_command, last_output, oracle_result):
     print(f"Oracle result: {oracle_result}")
     return input("Please suggest the next command for the Docker container (or type 'ABORT'): ")
 
-def complete_installation(image_name, repo_name, simulator, conn):
+def agentic_loop(image_name, repo_name, simulator, conn):
     try:
         context = f"Docker image: {image_name}. Partially-installed repo can be found at: /repos/{repo_name}"
         last_command = "Initial setup"
         last_output = "Container created"
         oracle_result = "Not yet consulted"
 
-        i  = 0
         while True:
-            i += 1
+            num_consecutive_failures = 0
             print("*" * 50)
             print("Asking LLM for next command...")
-            filename = str(random.randint(0, 100)) + ".txt"
-            next_command = "pip install numpy"
-            if (i >= 2):
-                next_command = "RUN ORACLE TESTS"
-            # Put the color in green 
+            next_command = llm_suggest_next_command(context, last_command, last_output, oracle_result)
+            # Put the color in green
             print(f"\033[92mSuggested command: {next_command}\033[0m")
+            ''' 
+            if num_consecutive_failures >= 5:
+                print("Oracle has failed 5 times in a row")
+            '''
 
-            if next_command == "RUN ORACLE TESTS":
+            if next_command == "RUN ORACLE":
                 #  CASE 1: Run the Oracle
                 print("Consulting the Oracle...")
                 oracle_result, message = installation_oracle(simulator, conn)
-                #oracle_result, message = True, ""
                 print(f"Oracle result: {oracle_result}")
                 last_command = next_command
                 last_output = "N/A; Oracle was consulted"
@@ -142,20 +165,27 @@ def complete_installation(image_name, repo_name, simulator, conn):
                 if oracle_result:
                     print("Installation completed successfully according to the Oracle.")
                     break
-
+                else:
+                    write_failure_mode(image_name, "RUN ORACLE", output)
             else:
+                #num_consecutive_failures = 0
                 # CASE 2: Run the suggested command
-                bash_command = "printenv && source .venv/bin/activate && " + next_command
+                bash_command = "source .venv/bin/activate && " + next_command
                 bash_command = f"bash -c {shlex.quote(bash_command)}"
                 exit_code, output = simulator.run_single_command(bash_command)
-                output = str(output)
-                #exit_code, output = 0, "Success"
+                output = output.decode('utf-8')
 
                 if exit_code != 0:
                     print(f"Command failed with exit code {exit_code}")
-                    print(f"Output: {output}")
+                    print("Output:")
+                    print("*" * 50)
+                    print(output)
+                    print("*" * 50)
+
+                    # Write this to failures/<image_name>_failures.json
+                    write_failure_mode(image_name, bash_command, output)
+
                     if exit_code == -1 or "critical error" in output.lower():
-                        print("Critical error detected: Requesting human intervention")
                         human_command = human_intervention(context, next_command, output, oracle_result)
                         if human_command.upper() == 'ABORT':
                             print("Installation aborted by human intervention")
@@ -177,7 +207,6 @@ def complete_installation(image_name, repo_name, simulator, conn):
                 break
 
     finally:
-        print("Stopping simulator...")
         simulator.stop_container()
 
 '''
@@ -205,24 +234,26 @@ def init_docker(repo_name, image_name):
         print(f"Service error -- {repo_name} -- {repr(e)}")
         raise e
 
+def install_repo(url):
+    '''
+    Clone, extract tests for, and install the repo at the given URL
+    '''
+    repo_name = url.split("/")[-1]
+    repo_author = url.split("/")[-2]
+    repo_id = repo_author + "___" + repo_name
+    image_name = "r2e:temp_" + repo_name
+
+    #setup_repo(url)
+    #setup_container(image_name)
+
+    simulator, conn = init_docker(repo_id, image_name)
+    installation_oracle(simulator, conn)
+    #agentic_loop(image_name, repo_name, simulator, conn)
+    print(f"Installation completed for repo with image name {image_name}")
+
 if __name__ == "__main__":
-    image_name = "r2e:placeholder3"
-    repo_name = "bad-repo-2"
-    simulator, conn = init_docker(repo_name, image_name)
+    urls = ["https://github.com/numpy/numpy", "https://github.com/pallets/jinja", "https://github.com/pallets/flask", "https://github.com/pallets/jinja"]
 
-    #bash_command = "ls -a"
-    #bash_command = f"bash -c {shlex.quote(bash_command)}"
-    #print(simulator.run_single_command(bash_command))
-
-    # Add some random environment variable and echo it to bashrc
-    bash_command = "printenv && echo 'export MY_TEST_ENV_VAR=123' >> ~/.bashrc && source ~/.bashrc"
-    bash_command = f"bash -c {shlex.quote(bash_command)}"
-    print(simulator.run_single_command(bash_command))
-
-    bash_command = "printenv && ls"
-    bash_command = f"bash -c {shlex.quote(bash_command)}"
-    print(simulator.run_single_command(bash_command))
-
-    #complete_installation(image_name, repo_name, simulator, conn)
-    #installation_oracle(simulator, conn)
-    #installation_oracle(simulator, conn)
+    url = urls[1]
+    print("Attempting to install:", url)
+    install_repo(url)
