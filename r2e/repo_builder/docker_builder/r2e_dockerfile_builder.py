@@ -22,7 +22,7 @@ def main(repo_args: RepoArgs):
 
     for i in range(0, num_repos, batch_size):
         dockerfile += (
-            f"RUN python3 parallel_installer.py {i} {i+batch_size} {batch_size}\n\n"
+            f"python3 parallel_installer.py {i} {i+batch_size} {batch_size}\n\n"
         )
     dockerfile += "RUN python3 tests.py\n\n"
 

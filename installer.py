@@ -242,7 +242,6 @@ def install_repo(url):
 if __name__ == "__main__":
     urls = ["https://github.com/numpy/numpy", "https://github.com/pallets/jinja", "https://github.com/pallets/flask", "https://github.com/pallets/jinja"]
 
-    #for url in urls:
     url = urls[1]
     print("Attempting to install:", url)
     install_repo(url)

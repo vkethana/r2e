@@ -16,12 +16,6 @@ RUN wget https://repo.anaconda.com/archive/Anaconda3-2023.09-0-Linux-x86_64.sh &
 # Add Anaconda to PATH
 ENV PATH="/opt/anaconda/bin:${PATH}"
 
-RUN curl -sSLO https://pdm-project.org/install-pdm.py \
-    && curl -sSL https://pdm-project.org/install-pdm.py.sha256 | shasum -a 256 -c - \
-    && python3.11 install-pdm.py \
-    && echo 'export PATH=/root/.local/bin:$PATH' >> ~/.bashrc \
-    && echo "Installed pdm"
-
 ADD https://api.github.com/repos/vkethana/r2e-docker-setup/git/refs/heads/pdm-fix-2 version.json 
 
 RUN git clone -b pdm-fix-2 https://github.com/vkethana/r2e-docker-setup.git /install_code
@@ -30,8 +24,3 @@ COPY . /repos
 WORKDIR /install_code
 
 RUN pip install -r requirements.txt
-
-RUN python3 parallel_installer.py 0 1 1
-
-RUN python3 tests.py
-

@@ -61,6 +61,10 @@ def setup_repo(url):
     reduce_data()
     make_equiv_test()
 
+def setup_test_container(image_name="r2e:interactive_partial_install"):
+    clone_repos("https://github.com/psf/requests")
+    os.system(f"cd ~/buckets/local_repoeval_bucket/repos && docker build -t {image_name} -f /home/vkethana/r2e/r2e/repo_builder/docker_builder/base_dockerfile.dockerfile .")
+
 def setup_container(image_name):
     # TODO Throw an error if either process doesn't succeed
     os.system("cd /home/vkethana/r2e && python r2e/repo_builder/docker_builder/r2e_dockerfile_builder.py  --install_batch_size 1")
@@ -82,4 +86,5 @@ def setup_container(image_name):
 
 if __name__ == "__main__":
     # Assume repo has already been cloned
-    print("Run installer.py to test this file")
+    #setup_test_container()
+    #print("Run installer.py to test this file")
