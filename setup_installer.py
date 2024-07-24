@@ -2,6 +2,10 @@ import os
 import json
 import random
 
+from r2e.paths import HOME_DIR
+
+R2E_REPO = HOME_DIR / "/r2e"
+
 def clear_repos_folder():
     # Check if there are any files or folders in ~/buckets/local_repoeval_bucket/repos
     # If there are, for each file/folder ask the user for confirmation before deleting
@@ -63,26 +67,19 @@ def setup_repo(url):
 
 def setup_test_container(image_name="r2e:interactive_partial_install"):
     clone_repos("https://github.com/psf/requests")
-    os.system(f"cd ~/buckets/local_repoeval_bucket/repos && docker build -t {image_name} -f /home/vkethana/r2e/r2e/repo_builder/docker_builder/base_dockerfile.dockerfile .")
+    print("IMPORTANT: MAKE SURE YOUR R2E INSTALL IS LOCATED AT /home/<username>/r2e")
+    print("IMPORTANT: MAKE SURE YOUR R2E INSTALL IS LOCATED AT /home/<username>/r2e")
+    print("IMPORTANT: MAKE SURE YOUR R2E INSTALL IS LOCATED AT /home/<username>/r2e")
+    #ans = input("Have you configured your R2E install to be located at /home/<username>/r2e? (y/n)")
+
+    dockerfile_path = R2E_REPO + " r2e/repo_builder/docker_builder/base_dockerfile.dockerfile"
+    os.system(f"cd ~/buckets/local_repoeval_bucket/repos && docker build -t {image_name} -f {dockerfile_path} .")
 
 def setup_container(image_name):
     # TODO Throw an error if either process doesn't succeed
-    os.system("cd /home/vkethana/r2e && python r2e/repo_builder/docker_builder/r2e_dockerfile_builder.py  --install_batch_size 1")
+    os.system(f"cd {R2E_REPO} && python r2e/repo_builder/docker_builder/r2e_dockerfile_builder.py  --install_batch_size 1")
+    os.system(f"cd ~/buckets/local_repoeval_bucket/repos && docker build -t {image_name} -f {R2E_REPO}/r2e/repo_builder/docker_builder/r2e_final_dockerfile.dockerfile .")
 
-    os.system(f"cd ~/buckets/local_repoeval_bucket/repos && docker build -t {image_name} -f /home/vkethana/r2e/r2e/repo_builder/docker_builder/r2e_final_dockerfile.dockerfile .")
-
-    # first make the relevant directory if it doesn't exist
-    #os.system(f"mkdir -p ~/buckets/local_repoeval_bucket/install_logs/{image_name}")
-    # enter the image in interactive mode, which has name image_name, and run cat /install_code/install_logs/* 
-    
-    # use -it to run the container in interactive mode
-    
-    # to get the logs of the installation process
-    # use --rm to remove the container after running it
-
-    #os.system(f"docker run --rm {image_name} cat /install_code/install_logs/* > ~/buckets/local_repoeval_bucket/install_logs/{image_name}/install_log.txt")
-    #os.system(f"docker run -it --rm {image_name} cat /install_code/install_logs/* > ~/buckets/local_repoeval_bucket/install_logs/{image_name}/install_log.txt")
-    #os.system(f"docker run -it --rm {image_name} cat /install_code/install_logs/*.log")
 
 if __name__ == "__main__":
     # Assume repo has already been cloned

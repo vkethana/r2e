@@ -17,11 +17,33 @@ from r2e.execution.r2e_simulator import DockerSimulator
 from r2e.execution.execute_futs import self_equiv_futs
 
 from setup_installer import setup_repo, setup_container
+from r2e.paths import R2E_BUCKET_DIR
 
 openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 client = docker.from_env()
 
-def check_execution_status(execution_output_path="/home/vkethana/buckets/r2e_bucket/testgen/temp_generate_out.json"):
+def write_failure_mode(command, output):
+    # Write this to failures/<image_name>_failures.json
+    # Check to see if the failures directory exists
+
+    if not os.path.exists("failures"):
+        os.makedirs("failures")
+
+    # Check if the file is already present in the failures directory
+    if not os.path.exists(f"{image_name}_failures.json"):
+        with open(f"failures/{image_name}_failures.json", "w") as f:
+            f.write(json.dumps({
+                "command": command,
+                "output": output
+            }) + "\n")
+    else:
+        with open(f"failures/{image_name}_failures.json", "a") as f:
+            f.write(json.dumps({
+                "command": bash_command,
+                "output": output
+            }) + "\n")
+
+def check_execution_status(execution_output_path = R2E_BUCKET_DIR + "/testgen/temp_generate_out.json"):
     # Read the JSON output file
     with open(execution_output_path, "r") as f:
         output = json.load(f)
@@ -73,7 +95,7 @@ def installation_oracle(simulator, conn):
     #command = f"python r2e/execution/run_self_equiv.py --testgen_exp_id temp_generate --image_name {image_name} --execution_multiprocess 0"
     try:
         print(f"Checking execution status...")
-        success, message = check_execution_status("/home/vkethana/buckets/r2e_bucket/testgen/temp_generate_out.json")
+        success, message = check_execution_status()
         print(success, message)
         return success, message
 
@@ -144,14 +166,7 @@ def agentic_loop(image_name, repo_name, simulator, conn):
                     print("Installation completed successfully according to the Oracle.")
                     break
                 else:
-                    with open(f"~/buckets/local_repoeval_bucket/failures/{image_name}_failures.json", "a") as f:
-                        f.write(json.dumps({
-                            "command": "RUN ORACLE",
-                            "output": output
-                        }) + "\n")
-                    #num_consecutive_failures += 1
-                    pass
-
+                    write_failure_mode("RUN ORACLE", image_name, output)
             else:
                 #num_consecutive_failures = 0
                 # CASE 2: Run the suggested command
@@ -168,11 +183,7 @@ def agentic_loop(image_name, repo_name, simulator, conn):
                     print("*" * 50)
 
                     # Write this to failures/<image_name>_failures.json
-                    with open(f"failures/{image_name}_failures.json", "a") as f:
-                        f.write(json.dumps({
-                            "command": bash_command,
-                            "output": output
-                        }) + "\n")
+                    write_failure_mode(bash_command, image_name, output)
 
                     if exit_code == -1 or "critical error" in output.lower():
                         human_command = human_intervention(context, next_command, output, oracle_result)
