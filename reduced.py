@@ -237,7 +237,7 @@ def install_repo(url):
     #setup_repo(url)
     #setup_container(image_name)
 
-    simulator, conn = init_docker(repo_id, "r2e:temp_jinjia")
+    simulator, conn = init_docker(repo_id, "r2e:temp_jinja")
     print("Trial running installation oracle")
     installation_oracle(simulator, conn)
     #agentic_loop(image_name, repo_name, simulator, conn)
@@ -245,7 +245,4 @@ def install_repo(url):
 
 if __name__ == "__main__":
     urls = ["https://github.com/numpy/numpy", "https://github.com/pallets/jinja", "https://github.com/pallets/flask", "https://github.com/pallets/jinja"]
-
-    url = urls[1]
-    print("Attempting to install:", url)
-    install_repo(url)
+    install_repo(urls[-1])
