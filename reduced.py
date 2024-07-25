@@ -237,10 +237,11 @@ def install_repo(url):
     #setup_repo(url)
     #setup_container(image_name)
 
-    simulator, conn = init_docker(repo_id, image_name)
+    simulator, conn = init_docker(repo_id, "r2e:temp_jinjia")
+    print("Trial running installation oracle")
     installation_oracle(simulator, conn)
     #agentic_loop(image_name, repo_name, simulator, conn)
-    print(f"Installation completed for repo with image name {image_name}")
+    #print(f"Installation completed for repo with image name {image_name}")
 
 if __name__ == "__main__":
     urls = ["https://github.com/numpy/numpy", "https://github.com/pallets/jinja", "https://github.com/pallets/flask", "https://github.com/pallets/jinja"]

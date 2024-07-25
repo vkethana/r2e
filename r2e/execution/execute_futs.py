@@ -25,6 +25,8 @@ def setup_futs(
     fut_data = [fut.execution_fut_data for fut in futs]
     fut_names = [x[0] for x in fut_data]
     fut_files = {x[1] for x in fut_data}
+    print("Initializing FUT at path: ", futs[0].file)
+    #print(futs)
 
     assert len(fut_files) == 1, "All functions must belong to the same file"
     # print(fut_files, futs[0].execution_fut_data)

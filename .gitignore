@@ -167,3 +167,4 @@ cython_debug/
 .DS_Store
 
 r2e/repo_builder/docker_builder/r2e_final_dockerfile.dockerfile
+failures/*

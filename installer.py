@@ -47,7 +47,7 @@ def check_execution_status(execution_output_path = str(R2E_BUCKET_DIR) + "/testg
     # Read the JSON output file
     with open(execution_output_path, "r") as f:
         output = json.load(f)
-    
+
     # Initialize a flag to track if we've seen any successful executions
     any_success = False
 
@@ -55,10 +55,10 @@ def check_execution_status(execution_output_path = str(R2E_BUCKET_DIR) + "/testg
     for item in output:
         test_history = item.get('test_history', {})
         history = test_history.get('history', [])
-        
+
         for entry in history:
             exec_stats = entry.get('exec_stats')
-            
+
             if exec_stats is not None:
                 # If any of them contains "error", return "ERROR"
                 if "error" in exec_stats.keys():
@@ -66,17 +66,11 @@ def check_execution_status(execution_output_path = str(R2E_BUCKET_DIR) + "/testg
                         return False, exec_stats['error']
                     except:
                         return False, "No error message found"
-                # If we find a success, set the flag
-                elif "success" in exec_stats.lower():
-                    any_success = True
-    
-    # If we've seen at least one success and no errors, return "INSTALLATION SUCCESSFUL"
-    if any_success:
-        return True, None
-    
-    # If we haven't seen any exec_stats or they were all None, return a neutral message
-    print("WARNING: NO ERROR OR SUCCESS MESSAGES FOUND")
-    return False, "No error or success messages found"
+            else:
+                print("WARNING: At least one test did not get properly executed")
+                print("Attempting to print method id of entry :", entry.get('method_id', 'No method id found'))
+
+    return True, None
 
 def installation_oracle(simulator, conn):
     # This function abstracts the verification command
@@ -141,12 +135,18 @@ def agentic_loop(image_name, repo_name, simulator, conn):
         last_command = "Initial setup"
         last_output = "Container created"
         oracle_result = "Not yet consulted"
+        user_command = None
 
         while True:
             num_consecutive_failures = 0
             print("*" * 50)
             print("Asking LLM for next command...")
-            next_command = llm_suggest_next_command(context, last_command, last_output, oracle_result)
+            if user_command:
+                next_command = user_command
+                print("Using user-suggested command:", next_command)
+                user_command = None
+            else:
+                next_command = llm_suggest_next_command(context, last_command, last_output, oracle_result)
             # Put the color in green
             print(f"\033[92mSuggested command: {next_command}\033[0m")
             ''' 
@@ -201,10 +201,13 @@ def agentic_loop(image_name, repo_name, simulator, conn):
 
             context += f"\nExecuted: {last_command}\nResult: {last_output}\nOracle: {message}"
 
-            cont = input("Press Enter to continue the installation or 'q' to quit: ")
+            cont = input("Press Enter to continue the installation or 'q' to quit or 'm' to manually suggest a command: ")
             if cont.lower() == 'q':
                 print("Installation aborted by user")
                 break
+            if cont.lower() == 'm':
+                print("Warning: Manual entry of commands is still a work in progress feature.")
+                user_command = input("Please suggest the next command for the Docker container: ")
 
     finally:
         simulator.stop_container()
@@ -243,7 +246,7 @@ def install_repo(url):
     repo_id = repo_author + "___" + repo_name
     image_name = "r2e:temp_" + repo_name
 
-    #setup_repo(url)
+    setup_repo(url)
     setup_container(image_name)
 
     simulator, conn = init_docker(repo_id, image_name)
@@ -251,8 +254,8 @@ def install_repo(url):
     print(f"Installation completed for repo with image name {image_name}")
 
 if __name__ == "__main__":
-    urls = ["https://github.com/numpy/numpy", "https://github.com/pallets/jinja", "https://github.com/pallets/flask", "https://github.com/pallets/jinja"]
+    urls = ["https://github.com/r2e-project/r2e", "https://github.com/numpy/numpy", "https://github.com/pallets/jinja", "https://github.com/pallets/flask", "https://github.com/pallets/jinja"]
 
-    url = urls[1]
+    url = urls[0]
     print("Attempting to install:", url)
     install_repo(url)
