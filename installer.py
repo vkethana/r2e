@@ -10,6 +10,7 @@ from openai import OpenAI
 import json
 import rpyc
 import random
+from inputimeout import inputimeout, TimeoutOccurred
 
 from r2e.execution.run_self_equiv import run_self_equiv
 from r2e.execution.execution_args import ExecutionArgs
@@ -201,7 +202,11 @@ def agentic_loop(image_name, repo_name, simulator, conn):
 
             context += f"\nExecuted: {last_command}\nResult: {last_output}\nOracle: {message}"
 
-            cont = input("Press Enter to continue the installation or 'q' to quit or 'm' to manually suggest a command: ")
+            try:
+                cont = inputimeout(prompt="Press Enter to continue the installation or 'q' to quit or 'm' to manually suggest a command: ", timeout=5)
+            except TimeoutOccurred:
+                cont = ''
+
             if cont.lower() == 'q':
                 print("Installation aborted by user")
                 break
@@ -246,6 +251,7 @@ def install_repo(url):
     repo_id = repo_author + "___" + repo_name
     image_name = "r2e:temp_" + repo_name
 
+    # Check if repo has already been inst
     setup_repo(url)
     setup_container(image_name)
 
@@ -254,7 +260,7 @@ def install_repo(url):
     print(f"Installation completed for repo with image name {image_name}")
 
 if __name__ == "__main__":
-    urls = ["https://github.com/r2e-project/r2e", "https://github.com/numpy/numpy", "https://github.com/pallets/jinja", "https://github.com/pallets/flask", "https://github.com/pallets/jinja"]
+    urls = ["https://github.com/pallets/flask", "https://github.com/streamlit/streamlit", "https://github.com/matplotlib/matplotlib", "https://github.com/r2e-project/r2e", "https://github.com/numpy/numpy", "https://github.com/pallets/jinja", "https://github.com/pallets/jinja"]
 
     url = urls[0]
     print("Attempting to install:", url)
