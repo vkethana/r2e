@@ -152,7 +152,7 @@ def agentic_loop(image_name, repo_name, simulator, conn):
             print(f"\033[92mSuggested command: {next_command}\033[0m")
              
             if oracle_failures >= 3:
-                raise RuntimeError("Oracle has failed 3. Skipping {repo_name} installation.")
+                raise RuntimeError(f"Oracle has failed 3. Skipping {repo_name} installation.")
             
 
             if next_command == "RUN ORACLE":
@@ -260,7 +260,7 @@ def install_repo(url):
     print(f"Installation completed for repo with image name {image_name}")
 
 if __name__ == "__main__":
-    urls = ["https://github.com/pallets/flask", "https://github.com/streamlit/streamlit", "https://github.com/matplotlib/matplotlib", "https://github.com/r2e-project/r2e", "https://github.com/numpy/numpy", "https://github.com/pallets/jinja", "https://github.com/pallets/jinja"]
+    urls = ["https://github.com/pallets/flask", "https://github.com/streamlit/streamlit", "https://github.com/r2e-project/r2e"]
     total_fails = 0
     tot_len = len(urls)
     for url in urls:
