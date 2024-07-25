@@ -44,13 +44,18 @@ def setup_futs(
     init_error = str(init_response["error"])
 
     if init_error:
-        futs[0].test_history.update_exec_stats(
-            {
+        print("FUT failed! Printing execution data...")
+        print("-" * 30)
+        exec_stat_info = {
                 "output": (
                     str(init_response["output"]) if "output" in init_response else None
                 ),
                 "error": init_error,
-            }
+        }
+        print(exec_stat_info)
+        print("-" * 30)
+        futs[0].test_history.update_exec_stats(
+            exec_stat_info
         )
         return False, init_error
     else:
@@ -81,7 +86,7 @@ def self_equiv_futs(
     submission_response = service_client.submit()
 
     if "logs" not in submission_response:
-        # print(submission_response["error"])
+        print("Fut returned an error!", submission_response["error"])
         futs[0].test_history.update_exec_stats(
             {
                 "error": str(submission_response["error"]),
