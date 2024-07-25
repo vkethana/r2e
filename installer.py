@@ -131,6 +131,7 @@ def human_intervention(context, last_command, last_output, oracle_result):
     return input("Please suggest the next command for the Docker container (or type 'ABORT'): ")
 
 def agentic_loop(image_name, repo_name, simulator, conn):
+    oracle_failures = 0
     try:
         context = f"Docker image: {image_name}. Partially-installed repo can be found at: /repos/{repo_name}"
         last_command = "Initial setup"
@@ -139,7 +140,6 @@ def agentic_loop(image_name, repo_name, simulator, conn):
         user_command = None
 
         while True:
-            num_consecutive_failures = 0
             print("*" * 50)
             print("Asking LLM for next command...")
             if user_command:
@@ -150,10 +150,10 @@ def agentic_loop(image_name, repo_name, simulator, conn):
                 next_command = llm_suggest_next_command(context, last_command, last_output, oracle_result)
             # Put the color in green
             print(f"\033[92mSuggested command: {next_command}\033[0m")
-            ''' 
-            if num_consecutive_failures >= 5:
-                print("Oracle has failed 5 times in a row")
-            '''
+             
+            if oracle_failures >= 3:
+                raise RuntimeError("Oracle has failed 3. Skipping {repo_name} installation.")
+            
 
             if next_command == "RUN ORACLE":
                 #  CASE 1: Run the Oracle
@@ -167,9 +167,9 @@ def agentic_loop(image_name, repo_name, simulator, conn):
                     print("Installation completed successfully according to the Oracle.")
                     break
                 else:
+                    oracle_failures += 1
                     write_failure_mode(image_name, "RUN ORACLE", output)
             else:
-                #num_consecutive_failures = 0
                 # CASE 2: Run the suggested command
                 bash_command = "source .venv/bin/activate && " + next_command
                 bash_command = f"bash -c {shlex.quote(bash_command)}"
@@ -261,7 +261,15 @@ def install_repo(url):
 
 if __name__ == "__main__":
     urls = ["https://github.com/pallets/flask", "https://github.com/streamlit/streamlit", "https://github.com/matplotlib/matplotlib", "https://github.com/r2e-project/r2e", "https://github.com/numpy/numpy", "https://github.com/pallets/jinja", "https://github.com/pallets/jinja"]
+    total_fails = 0
+    tot_len = len(urls)
+    for url in urls:
+        print("Attempting to install:", url)
+        try: 
+            install_repo(url)
+        except Exception as e:
+            total_fails += 1
+            print("Error message is: ", e)
+    print(f"Among {tot_len} repos, {total_fails} installations failed")
+        
 
-    url = urls[0]
-    print("Attempting to install:", url)
-    install_repo(url)
