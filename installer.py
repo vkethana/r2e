@@ -18,7 +18,7 @@ from r2e.execution.r2e_simulator import DockerSimulator
 from r2e.execution.execute_futs import self_equiv_futs
 
 from setup_installer import setup_repo, setup_container
-from r2e.paths import R2E_BUCKET_DIR
+from r2e.paths import REPOS_DIR
 
 openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 client = docker.from_env()
@@ -251,9 +251,13 @@ def install_repo(url):
     repo_id = repo_author + "___" + repo_name
     image_name = "r2e:temp_" + repo_name
 
-    # Check if repo has already been inst
+    # Check if repo has already been installed
+    dir_name = "dir_" + repo_name
+    if not os.path.exists(directory_name):
+        os.makedirs(directory_name)
+
     setup_repo(url)
-    setup_container(image_name)
+    #setup_container(image_name)
 
     simulator, conn = init_docker(repo_id, image_name)
     agentic_loop(image_name, repo_name, simulator, conn)
@@ -263,7 +267,7 @@ if __name__ == "__main__":
     urls = ["https://github.com/pallets/flask", "https://github.com/streamlit/streamlit", "https://github.com/r2e-project/r2e"]
     total_fails = 0
     tot_len = len(urls)
-    for url in urls:
+    for url in urls[2]:
         print("Attempting to install:", url)
         try: 
             install_repo(url)

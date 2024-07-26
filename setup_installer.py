@@ -24,16 +24,19 @@ def clear_repos_folder():
                 # Delete the whole directory
                 os.system(f"rm -rf {item_path}")
 
+# TODO: Change setup_repos.py architecture -- DONE
 def clone_repos(url):
     # Clone the relevant repos from a list
     command = f"python r2e/repo_builder/setup_repos.py --repo_url {url}"
     os.system(command)
 
+# TODO arch change in extract_func_methods -- DONE
 def extract_data():
     # Extract data from all repos
     command = "python r2e/repo_builder/extract_func_methods.py --overwrite_extracted True"
     os.system(command)
 
+#TODO: Modify path for arch change
 def reduce_data():
     # Trim down the extracted data
     # Open up the extracted file (~/buckets/r2e_bucket/extracted_data/temp_extracted.json)
@@ -62,8 +65,8 @@ def setup_repo(url):
     clear_repos_folder()
     clone_repos(url)
     extract_data()
-    reduce_data()
-    make_equiv_test()
+    #reduce_data()
+    #make_equiv_test()
 
 def setup_test_container(image_name="r2e:interactive_partial_install"):
     clone_repos("https://github.com/psf/requests")
@@ -75,6 +78,7 @@ def setup_test_container(image_name="r2e:interactive_partial_install"):
     dockerfile_path = R2E_REPO + " r2e/repo_builder/docker_builder/base_dockerfile.dockerfile"
     os.system(f"cd ~/buckets/local_repoeval_bucket/repos && docker build -t {image_name} -f {dockerfile_path} .")
 
+# TODO: Add second arg of the repo specific folder name
 def setup_container(image_name):
     # TODO Throw an error if either process doesn't succeed
     os.system(f"cd {R2E_REPO} && python r2e/repo_builder/docker_builder/r2e_dockerfile_builder.py  --install_batch_size 1")
