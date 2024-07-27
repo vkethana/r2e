@@ -53,7 +53,7 @@ class SetupRepos:
         repo_username, repo_name = (
             repo_url.rstrip("/").removesuffix(".git").split("/")[-2:]
         )
-        local_repo_clone_path = REPOS_DIR / f"dir_{repo_name}"
+        local_repo_clone_path = REPOS_DIR / f"dir_{repo_name}" / f"local_{repo_name}"
 
         if os.path.exists(local_repo_clone_path):
             print(

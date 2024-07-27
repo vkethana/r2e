@@ -15,9 +15,7 @@ REPOS_DIR = HOME_DIR / config["repos_dir"]
 CACHE_DIR = HOME_DIR / config["cache_dir"]
 
 # Everything previously under r2e_buckets is now under repos
-# TODO: this paths.py needs further changes:
-#       I think the following directories should be assorted under dir_{repo_name} individually
-#       For now they are all together for miscellaneous repos
+# TODO: Make the following 5 directories repo-specific. Probably should not define them in paths.py, instead just generate the path for each repo
 
 GRAPHS_DIR = REPOS_DIR / "repo_graphs"
 INTERESTING_FUNCS_DIR = REPOS_DIR / "interesting_functions"

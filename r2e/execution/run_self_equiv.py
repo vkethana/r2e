@@ -5,7 +5,8 @@ from pathlib import Path
 
 import fire
 
-from r2e.paths import TESTGEN_DIR, EXECUTION_DIR
+#TODO Modify TESTGEN_DIR
+from r2e.paths import REPOS_DIR # "/repos"
 from r2e.multiprocess import run_tasks_in_parallel_iter
 from r2e.execution.execution_args import ExecutionArgs
 from r2e.execution.r2e_simulator import DockerSimulator
@@ -65,9 +66,13 @@ def run_fut_mp(args: tuple[FunctionUnderTest | MethodUnderTest, str]) -> tuple[b
     output = run_fut_with_port(fut, port, image_name)
     return output
 
-def run_self_equiv(exec_args: ExecutionArgs, simulator=None, conn=None):
+# Added argument to generate testgen directory path
+def run_self_equiv(exec_args: ExecutionArgs, repo_name, simulator=None, conn=None):
     assert (simulator != None)
-    futs = load_functions_under_test(TESTGEN_DIR / f"{exec_args.testgen_exp_id}.json")
+    testgen_dir = REPOS_DIR / "dir_{repo_name}" / "testgen"
+    if not testgen_dir.exists():
+        testgen_dir.mkdir()
+    futs = load_functions_under_test(testgen_dir / f"{exec_args.testgen_exp_id}.json")
     #futs = Tests(tests={})
     '''
     for fut in futs:
@@ -122,7 +127,7 @@ def run_self_equiv(exec_args: ExecutionArgs, simulator=None, conn=None):
             else:
                 print(f"Error: {x.exception_tb}")
     write_functions_under_test(
-        new_futs, TESTGEN_DIR / f"{exec_args.testgen_exp_id}_out.json"
+        new_futs, testgen_dir / f"{exec_args.testgen_exp_id}_out.json"
     )
 
 

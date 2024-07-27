@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Optional
 from pydantic import BaseModel
 
-from r2e.paths import REPOS_DIR, GRAPHS_DIR
+from r2e.paths import REPOS_DIR
 from r2e.models.identifier import Identifier
 from r2e.models.callgraph import CallGraph
 
@@ -18,10 +18,16 @@ class Repo(BaseModel):
 
     @property
     def callgraph_path(self) -> str:
-        return os.path.join(GRAPHS_DIR, self.repo_id + "_cgraph.json")
+        # Create a call graph folder specific to each repo
+        repo_org, repo_name = repo_path.split("___")
+        graphs_dir = REPOS_DIR / f"dir_{repo_name}" / "repo_graphs"
+        if not graphs_dir.exists():
+            graphs_dir.mkdir()
+        return os.path.join(graphs_dir, self.repo_id + "_cgraph.json")
 
     @classmethod
     def from_file_path(cls, file_path: Path | str) -> "Repo":
+        print(f"FILE PATH IS: {file_path}\n")
         if isinstance(file_path, Path):
             file_path = str(file_path)
         # NOTE: this is a hacky way to get the repo path

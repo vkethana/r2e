@@ -3,6 +3,11 @@ from pydantic import Field
 
 
 class TestGenArgs(LLMArgs):
+    repo_url: str | None = Field(
+        None,
+        description="URL of the repository to build, used to create testgen path",
+    )
+
     context_type: str = Field(
         "sliced",
         description="The context type to use for the language model",

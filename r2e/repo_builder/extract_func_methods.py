@@ -23,7 +23,7 @@ def remove_bom_from_directory(directory_path):
             if file_path.endswith('.py'):  
                 remove_bom_from_file(file_path)
 
-#TODO: Modify extraction path -- DONE
+#TODO: Modify extraction path. Repo args are none.
 def build_functions_and_methods(repo_args: RepoArgs):
     repo_name = repo_args.repo_url.split("/")[-1] 
     extraction_repo = REPOS_DIR / f"dir_{repo_name}" / "extracted_data"

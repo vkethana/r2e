@@ -8,7 +8,7 @@ from r2e.models.module import Module
 from r2e.models.repo import Repo
 from r2e.models.callgraph import CodeElemType
 from r2e.pat.ast.explorer import build_ast_file
-from r2e.paths import R2E_BUCKET_DIR
+#from r2e.paths import R2E_BUCKET_DIR
 
 
 IncEx: typing_extensions.TypeAlias = (

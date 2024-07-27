@@ -44,7 +44,8 @@ def write_failure_mode(image_name, command, output):
                 "output": output
             }) + "\n")
 
-def check_execution_status(execution_output_path = str(R2E_BUCKET_DIR) + "/testgen/temp_generate_out.json"):
+def check_execution_status(repo_name):
+    execution_output_path = REPOS_DIR / "dir_{repo_name}" / "testgen/temp_generate_out.json"
     # Read the JSON output file
     with open(execution_output_path, "r") as f:
         output = json.load(f)
@@ -73,7 +74,7 @@ def check_execution_status(execution_output_path = str(R2E_BUCKET_DIR) + "/testg
 
     return True, None
 
-def installation_oracle(simulator, conn):
+def installation_oracle(repo_name, simulator, conn):
     # This function abstracts the verification command
 
     exec_args = ExecutionArgs(
@@ -90,7 +91,7 @@ def installation_oracle(simulator, conn):
     #command = f"python r2e/execution/run_self_equiv.py --testgen_exp_id temp_generate --image_name {image_name} --execution_multiprocess 0"
     try:
         print(f"Checking execution status...")
-        success, message = check_execution_status()
+        success, message = check_execution_status(repo_name)
         print(success, message)
         return success, message
 
@@ -158,7 +159,7 @@ def agentic_loop(image_name, repo_name, simulator, conn):
             if next_command == "RUN ORACLE":
                 #  CASE 1: Run the Oracle
                 print("Consulting the Oracle...")
-                oracle_result, message = installation_oracle(simulator, conn)
+                oracle_result, message = installation_oracle(repo_name, simulator, conn)
                 print(f"Oracle result: {oracle_result}")
                 last_command = next_command
                 last_output = "N/A; Oracle was consulted"
@@ -253,11 +254,11 @@ def install_repo(url):
 
     # Check if repo has already been installed
     dir_name = "dir_" + repo_name
-    if not os.path.exists(directory_name):
-        os.makedirs(directory_name)
+    if not os.path.exists(dir_name):
+        os.makedirs(dir_name)
 
     setup_repo(url)
-    #setup_container(image_name)
+    setup_container(image_name)
 
     simulator, conn = init_docker(repo_id, image_name)
     agentic_loop(image_name, repo_name, simulator, conn)
@@ -267,7 +268,8 @@ if __name__ == "__main__":
     urls = ["https://github.com/pallets/flask", "https://github.com/streamlit/streamlit", "https://github.com/r2e-project/r2e"]
     total_fails = 0
     tot_len = len(urls)
-    for url in urls[2]:
+    for url in urls:
+        #url = urls[2]
         print("Attempting to install:", url)
         try: 
             install_repo(url)
