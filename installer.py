@@ -45,7 +45,7 @@ def write_failure_mode(image_name, command, output):
             }) + "\n")
 
 def check_execution_status(repo_name):
-    execution_output_path = REPOS_DIR / "dir_{repo_name}" / "testgen/temp_generate_out.json"
+    execution_output_path = REPOS_DIR / f"dir_{repo_name}" / "testgen/temp_generate_out.json"
     # Read the JSON output file
     with open(execution_output_path, "r") as f:
         output = json.load(f)
@@ -53,6 +53,7 @@ def check_execution_status(repo_name):
     # Initialize a flag to track if we've seen any successful executions
     any_success = False
 
+    
     # Search for all the "exec_stats" fields
     for item in output:
         test_history = item.get('test_history', {})
@@ -60,7 +61,7 @@ def check_execution_status(repo_name):
 
         for entry in history:
             exec_stats = entry.get('exec_stats')
-
+            print(exec_stats.keys())
             if exec_stats is not None:
                 # If any of them contains "error", return "ERROR"
                 if "error" in exec_stats.keys():
@@ -71,7 +72,7 @@ def check_execution_status(repo_name):
             else:
                 print("WARNING: At least one test did not get properly executed")
                 print("Attempting to print method id of entry :", entry.get('method_id', 'No method id found'))
-
+    print("Execution status check finished.")
     return True, None
 
 def installation_oracle(repo_name, simulator, conn):
@@ -84,11 +85,10 @@ def installation_oracle(repo_name, simulator, conn):
     )
 
     print(f"Running Oracle self-equivalence test...")
-    # Run the self_equiv function
-    run_self_equiv(exec_args, simulator, conn)
+    run_self_equiv(exec_args, repo_name, simulator, conn)
 
     # This file contains the output of the execution
-    #command = f"python r2e/execution/run_self_equiv.py --testgen_exp_id temp_generate --image_name {image_name} --execution_multiprocess 0"
+    # command = f"python r2e/execution/run_self_equiv.py --testgen_exp_id temp_generate --image_name {image_name} --execution_multiprocess 0"
     try:
         print(f"Checking execution status...")
         success, message = check_execution_status(repo_name)
@@ -258,7 +258,7 @@ def install_repo(url):
         os.makedirs(dir_name)
 
     setup_repo(url)
-    setup_container(image_name)
+    setup_container(image_name, repo_name)
 
     simulator, conn = init_docker(repo_id, image_name)
     agentic_loop(image_name, repo_name, simulator, conn)
