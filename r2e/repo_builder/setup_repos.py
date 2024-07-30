@@ -6,8 +6,9 @@ from pathlib import Path
 
 import fire
 
+#from r2e.pat.imports.transformer import ImportTransformer
 from r2e.paths import REPOS_DIR
-from r2e.repo_builder.run_pycg import run_pycg
+from r2e.repo_builder.run_pycg import transform_path #run_pycg
 from r2e.repo_builder.repo_args import RepoArgs
 from r2e.multiprocess import run_tasks_in_parallel_iter
 
@@ -19,7 +20,7 @@ class SetupRepos:
         REPOS_DIR.mkdir(parents=True, exist_ok=True)
         if repo_args.repo_url:
             SetupRepos.clone_repo_from_url(repo_args.repo_url)
-
+            
         elif repo_args.local_repo_path:
             SetupRepos.copy_repo(repo_args.local_repo_path)
 
@@ -44,8 +45,8 @@ class SetupRepos:
                     isinstance(x, str) for x in repo_urls
                 ), f"Expected list of strings, got {repo_urls}"
             SetupRepos.clone_repos_from_urls(repo_urls, repo_args.cloning_multiprocess)
-
         #run_pycg(repo_args)
+        transform_path()
 
     @staticmethod
     def clone_repo_from_url(repo_url: str):

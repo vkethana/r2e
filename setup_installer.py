@@ -15,14 +15,14 @@ def clear_repos_folder():
         item_path = os.path.join(repos_folder, item)
         if os.path.isfile(item_path):
             # Ask for confirmation
-            confirm = input(f"Delete {item_path}? (y/n): ")
-            if confirm.lower() == 'y':
-                os.remove(item_path)
+           # confirm = input(f"Delete {item_path}? (y/n): ")
+           # if confirm.lower() == 'y':
+             os.remove(item_path)
         elif os.path.isdir(item_path):
-            confirm = input(f"Delete {item_path}? (y/n): ")
-            if confirm.lower() == 'y':
+            #confirm = input(f"Delete {item_path}? (y/n): ")
+            #if confirm.lower() == 'y':
                 # Delete the whole directory
-                os.system(f"rm -rf {item_path}")
+             os.system(f"rm -rf {item_path}")
 
 def clone_repos(url):
     # Clone the relevant repos from a list
