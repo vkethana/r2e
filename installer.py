@@ -261,7 +261,16 @@ def install_repo(url):
 
 if __name__ == "__main__":
     #Scale up repo counts here
-    urls = ["https://github.com/pallets/jinja", "https://github.com/streamlit/streamlit", "https://github.com/r2e-project/r2e"]
+    urls = ["https://github.com/pallets/jinja", 
+            "https://github.com/streamlit/streamlit",
+            "https://github.com/r2e-project/r2e", 
+            "https://github.com/jczic/ESP32-MPY-Jama.git",
+            "https://github.com/ShuhongChen/panic3d-anime-reconstruction.git",
+            "https://github.com/SUSYUSTC/MathTranslate.git",
+            "https://github.com/ymcui/Chinese-LLaMA-Alpaca.git",
+            "https://github.com/mikumifa/biliTickerBuy.git",
+            "https://github.com/isaiahbjork/Auto-GPT-MetaTrader-Plugin.git",
+            "https://github.com/sponsors/moraroy.git",]
     total_fails = 0
     tot_len = len(urls)
     for url in urls:
