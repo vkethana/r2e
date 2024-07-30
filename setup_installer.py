@@ -24,22 +24,26 @@ def clear_repos_folder():
                 # Delete the whole directory
                 os.system(f"rm -rf {item_path}")
 
+# TODO: Change setup_repos.py architecture -- DONE
 def clone_repos(url):
     # Clone the relevant repos from a list
     command = f"python r2e/repo_builder/setup_repos.py --repo_url {url}"
     os.system(command)
 
-def extract_data():
+# TODO arch change in extract_func_methods; provide repo_url for parsing -- DONE
+def extract_data(url):
     # Extract data from all repos
-    command = "python r2e/repo_builder/extract_func_methods.py --overwrite_extracted True"
+    command = f"python r2e/repo_builder/extract_func_methods.py --repo_url {url} --overwrite_extracted True"
     os.system(command)
 
-def reduce_data():
+#TODO: Modify path for arch change -- DONE 
+def reduce_data(url):
     # Trim down the extracted data
-    # Open up the extracted file (~/buckets/r2e_bucket/extracted_data/temp_extracted.json)
+    # Open up the extracted file (~/buckets/local_repoeval_bucket/repos/dir_{repo_name}/extracted_data/temp_extracted.json  
     # It consists of a list of JSON objects. Possibly hundreds. Trim it down to just num_funcs (let num_funcs=5). Select the num_funcs tests at random
     num_funcs = 5
-    extracted_file_path = os.path.expanduser('~/buckets/r2e_bucket/extracted_data/temp_extracted.json')
+    repo_name = url.split("/")[-1] 
+    extracted_file_path = os.path.expanduser(f"~/buckets/local_repoeval_bucket/repos/dir_{repo_name}/extracted_data/temp_extracted.json")
 
     # Read the extracted data
     with open(extracted_file_path, 'r') as f:
@@ -53,17 +57,18 @@ def reduce_data():
     with open(extracted_file_path, 'w') as f:
         json.dump(data, f, indent=4)
 
-def make_equiv_test():
+def make_equiv_test(url):
+    # TODO: put testgen in the respective folder of the repo
     # Generate the equivalence tests
-    command="python r2e/generators/testgen/generate.py -i temp_extracted.json --multiprocess 0"
+    command=f"python r2e/generators/testgen/generate.py -i temp_extracted.json --multiprocess 0 --repo_url {url}"
     os.system(command)
 
 def setup_repo(url):
     clear_repos_folder()
     clone_repos(url)
-    extract_data()
-    reduce_data()
-    make_equiv_test()
+    extract_data(url)
+    reduce_data(url)
+    make_equiv_test(url)
 
 def setup_test_container(image_name="r2e:interactive_partial_install"):
     clone_repos("https://github.com/psf/requests")
@@ -75,10 +80,11 @@ def setup_test_container(image_name="r2e:interactive_partial_install"):
     dockerfile_path = R2E_REPO + " r2e/repo_builder/docker_builder/base_dockerfile.dockerfile"
     os.system(f"cd ~/buckets/local_repoeval_bucket/repos && docker build -t {image_name} -f {dockerfile_path} .")
 
-def setup_container(image_name):
+# TODO: Add second arg of the repo specific folder name
+def setup_container(image_name, repo_name):
     # TODO Throw an error if either process doesn't succeed
-    os.system(f"cd {R2E_REPO} && python r2e/repo_builder/docker_builder/r2e_dockerfile_builder.py  --install_batch_size 1")
-    os.system(f"cd ~/buckets/local_repoeval_bucket/repos && docker build -t {image_name} -f {R2E_REPO}/r2e/repo_builder/docker_builder/r2e_final_dockerfile.dockerfile .")
+    os.system(f"cd ~/r2e && python r2e/repo_builder/docker_builder/r2e_dockerfile_builder.py  --install_batch_size 1")
+    os.system(f"cd ~/buckets/local_repoeval_bucket/repos/dir_{repo_name} && docker build -t {image_name} -f ~/r2e/r2e/repo_builder/docker_builder/r2e_final_dockerfile.dockerfile .")
 
 
 if __name__ == "__main__":

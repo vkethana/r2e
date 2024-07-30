@@ -1,5 +1,6 @@
 import ast
 import argparse
+import os
 import tiktoken
 import fire
 from tqdm import tqdm
@@ -19,7 +20,7 @@ from r2e.utils.data import (
     write_functions,
     write_functions_under_test,
 )
-from r2e.paths import EXTRACTED_DATA_DIR, TESTGEN_DIR, timestamp
+from r2e.paths import timestamp, REPOS_DIR
 
 
 class R2ETestGenerator:
@@ -27,7 +28,15 @@ class R2ETestGenerator:
     @staticmethod
     def generate(args):
         """Generate tests for functions"""
-        functions = load_functions(EXTRACTED_DATA_DIR / args.in_file)
+        repo_url = args.repo_url
+        repo_name = repo_url.split("/")[-1]
+        extracted_data = REPOS_DIR / f"dir_{repo_name}" / "extracted_data"
+        
+        # Error checking
+        if not os.path.exists(extracted_data):
+            raise FileNotFoundError(f"The directory {extracted_data} does not exist.No extracted data to create test for.\n")
+        
+        functions = load_functions(extracted_data / args.in_file)
 
         tasks = R2ETestGenerator.prepare_tasks(functions)
         payloads = [task.chat_messages for task in tasks]
@@ -54,8 +63,9 @@ class R2ETestGenerator:
                     gen_date=timestamp(),
                 )
             )
-        TESTGEN_DIR.mkdir(parents=True, exist_ok=True)
-        write_functions_under_test(futs, TESTGEN_DIR / f"{args.exp_id}_generate.json")
+        testgen_dir = REPOS_DIR / f"dir_{repo_name}" / "testgen"
+        testgen_dir.mkdir(parents=True, exist_ok=True)
+        write_functions_under_test(futs, testgen_dir / f"{args.exp_id}_generate.json")
 
     @staticmethod
     def execute(args):

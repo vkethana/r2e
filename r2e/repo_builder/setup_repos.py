@@ -47,12 +47,13 @@ class SetupRepos:
 
         #run_pycg(repo_args)
 
+#TODO: Modify arch change -- DONE
     @staticmethod
     def clone_repo_from_url(repo_url: str):
         repo_username, repo_name = (
             repo_url.rstrip("/").removesuffix(".git").split("/")[-2:]
         )
-        local_repo_clone_path = REPOS_DIR / f"{repo_username}___{repo_name}"
+        local_repo_clone_path = REPOS_DIR / f"dir_{repo_name}" / f"local_{repo_name}"
 
         if os.path.exists(local_repo_clone_path):
             print(
@@ -81,6 +82,7 @@ class SetupRepos:
 
         shutil.copytree(local_repo_path, local_repo_clone_path)
 
+#TODO: Modify for arch changes
     @staticmethod
     def clone_repos_from_urls(repo_urls: list[str], cloning_multiprocess: int):
         if cloning_multiprocess > 0:

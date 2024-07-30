@@ -2,10 +2,11 @@ import rpyc
 import random
 import traceback
 from pathlib import Path
-
+import sys
 import fire
 
-from r2e.paths import TESTGEN_DIR, EXECUTION_DIR
+#TODO Modify TESTGEN_DIR
+from r2e.paths import REPOS_DIR # "/repos"
 from r2e.multiprocess import run_tasks_in_parallel_iter
 from r2e.execution.execution_args import ExecutionArgs
 from r2e.execution.r2e_simulator import DockerSimulator
@@ -15,19 +16,19 @@ from r2e.utils.data import load_functions_under_test, write_functions_under_test
 from r2e.models import Tests
 from r2e.models import Function
 
-'''
-def get_service(repo_id: str, port: int, image_name: str, container) -> tuple[DockerSimulator, rpyc.Connection]:
-    simulator = DockerSimulator(repo_id=repo_id, port=port, image_name=image_name)
-    try:
-        conn = rpyc.connect(
-            "localhost", port, keepalive=True, config={"sync_request_timeout": 180}
-        )
-    except Exception as e:
-        print(f"Connection error -- {repo_id} -- {repr(e)}")
-        simulator.stop_container()
-        raise e
-    return simulator, conn
-'''
+
+#def get_service(repo_id: str, port: int, image_name: str, container) -> tuple[DockerSimulator, rpyc.Connection]:
+#    simulator = DockerSimulator(repo_id=repo_id, port=port, image_name=image_name)
+#    try:
+#        conn = rpyc.connect(
+#           "localhost", port, keepalive=True, config={"sync_request_timeout": 180}
+#        )
+#    except Exception as e:
+#        print(f"Connection error -- {repo_id} -- {repr(e)}")
+#        simulator.stop_container()
+#        raise e
+#    return simulator, conn
+
 
 
 def run_fut_with_port(
@@ -65,9 +66,14 @@ def run_fut_mp(args: tuple[FunctionUnderTest | MethodUnderTest, str]) -> tuple[b
     output = run_fut_with_port(fut, port, image_name)
     return output
 
-def run_self_equiv(exec_args: ExecutionArgs, simulator=None, conn=None):
+
+# TODO: Modify testgen dir path. --DONE 
+def run_self_equiv(exec_args: ExecutionArgs, repo_name, simulator=None, conn=None):
     assert (simulator != None)
-    futs = load_functions_under_test(TESTGEN_DIR / f"{exec_args.testgen_exp_id}.json")
+    testgen_dir = REPOS_DIR / f"dir_{repo_name}" / "testgen"
+    if not testgen_dir.exists():
+        testgen_dir.mkdir()
+    futs = load_functions_under_test(testgen_dir / f"{exec_args.testgen_exp_id}.json")
     #futs = Tests(tests={})
     '''
     for fut in futs:
@@ -122,12 +128,13 @@ def run_self_equiv(exec_args: ExecutionArgs, simulator=None, conn=None):
             else:
                 print(f"Error: {x.exception_tb}")
     write_functions_under_test(
-        new_futs, TESTGEN_DIR / f"{exec_args.testgen_exp_id}_out.json"
+        new_futs, testgen_dir / f"{exec_args.testgen_exp_id}_out.json"
     )
 
 
 if __name__ == "__main__":
+    print("Not suggested to run this code snipped directly. Only used as import now. Aborting...")
     exec_args = fire.Fire(ExecutionArgs)
-    EXECUTION_DIR.mkdir(parents=True, exist_ok=True)
+    sys.exit()
+    #EXECUTION_DIR.mkdir(parents=True, exist_ok=True)
     #run_self_equiv(exec_args)
-    print("You can't run this file directly anymore. Sorry.")
