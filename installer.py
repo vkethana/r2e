@@ -203,7 +203,7 @@ def agentic_loop(image_name, repo_name, simulator, conn):
             context += f"\nExecuted: {last_command}\nResult: {last_output}\nOracle: {message}"
 
             try:
-                cont = inputimeout(prompt="Press Enter to continue the installation or 'q' to quit or 'm' to manually suggest a command: ", timeout=5)
+                cont = inputimeout(prompt="Press Enter to continue the installation or 'q' to quit or 'm' to manually suggest a command: ", timeout=0.5)
             except TimeoutOccurred:
                 cont = ''
 
@@ -261,7 +261,75 @@ def install_repo(url):
 
 if __name__ == "__main__":
     #Scale up repo counts here
-    urls = ["https://github.com/public-apis/public-apis",
+    urls = [ 
+    "https://github.com/dbt-labs/dbt-core",
+    "https://github.com/microsoft/playwright-python",
+    "https://github.com/ageron/handson-ml2",
+    "https://github.com/huggingface/datasets",
+    "https://github.com/slundberg/shap",
+    "https://github.com/ultralytics/yolov5",
+    "https://github.com/scanapi/scanapi",
+    "https://github.com/chiphuyen/stanford-tensorflow-tutorials",
+    "https://github.com/microsoft/ML-For-Beginners",
+    "https://github.com/The-Art-of-Hacking/h4cker",
+    "https://github.com/ageron/handson-ml",
+    "https://github.com/apache/airflow",
+    "https://github.com/sivel/speedtest-cli",
+    "https://github.com/yt-dlp/yt-dlp",
+    "https://github.com/facebookresearch/detectron2",
+    "https://github.com/kivy/kivy",
+    "https://github.com/matrix-org/synapse",
+    "https://github.com/DeepLabCut/DeepLabCut",
+    "https://github.com/facebookresearch/pytext",
+    "https://github.com/encode/django-rest-framework",
+    "https://github.com/streamlit/streamlit",
+    "https://github.com/apache/incubator-superset",
+    "https://github.com/scipy/scipy",
+    "https://github.com/twintproject/twint",
+    "https://github.com/motioneye-project/motioneye",
+    "https://github.com/mahmoud/boltons",
+    "https://github.com/toddmotto/public-apis",
+    "https://github.com/mementum/backtrader",
+    "https://github.com/securestate/king-phisher",
+    "https://github.com/sherlock-project/sherlock",
+    "https://github.com/kellyjonbrazil/jc",
+    "https://github.com/pandas-profiling/pandas-profiling",
+    "https://github.com/rocky/python-uncompyle6",
+    "https://github.com/ytdl-org/youtube-dl",
+    "https://github.com/TheAlgorithms/Python",
+    "https://github.com/ruanyf/weekly",
+    "https://github.com/google-research/football",
+    "https://github.com/RasaHQ/rasa",
+    "https://github.com/jackfrued/Python-100-Days",
+    "https://github.com/locustio/locust",
+    "https://github.com/reorx/httpstat",
+    "https://github.com/plotly/plotly.py",
+    "https://github.com/dmlc/dgl",
+    "https://github.com/mwaskom/seaborn",
+    "https://github.com/amitmerchant1990/reverie",
+    "https://github.com/jupyter/notebook",
+    "https://github.com/jupyterhub/jupyterhub",
+    "https://github.com/numpy/numpy",
+    "https://github.com/ipython/ipython",
+    "https://github.com/eriklindernoren/ML-From-Scratch"]
+
+    total_fails = 0
+    total_succ = 0
+    tot_len = len(urls)
+    for url in urls:
+        print("Attempting to install:", url)
+        try: 
+            install_repo(url)
+            total_succ += 1
+        except Exception as e:
+            total_fails += 1
+            print("Error message is: ", e)
+        print("\n")
+        print(f"total successful installed : {total_succ}, total fails : {total_fails}")
+    print(f"Among {tot_len} repos, {total_fails} installations failed")
+
+
+'''
 "https://github.com/donnemartin/system-design-primer",
 "https://github.com/vinta/awesome-python",
 "https://github.com/TheAlgorithms/Python",
@@ -302,71 +370,5 @@ if __name__ == "__main__":
 "https://github.com/scrapy/scrapy",
 "https://github.com/plotly/dash",
 "https://github.com/trailofbits/manticore",
-"https://github.com/quantumblacklabs/kedro",
-"https://github.com/dbt-labs/dbt-core",
-"https://github.com/microsoft/playwright-python",
-"https://github.com/ageron/handson-ml2",
-"https://github.com/huggingface/datasets",
-"https://github.com/slundberg/shap",
-"https://github.com/ultralytics/yolov5",
-"https://github.com/scanapi/scanapi",
-"https://github.com/chiphuyen/stanford-tensorflow-tutorials",
-"https://github.com/microsoft/ML-For-Beginners",
-"https://github.com/The-Art-of-Hacking/h4cker",
-"https://github.com/ageron/handson-ml",
-"https://github.com/apache/airflow",
-"https://github.com/sivel/speedtest-cli",
-"https://github.com/yt-dlp/yt-dlp",
-"https://github.com/facebookresearch/detectron2",
-"https://github.com/kivy/kivy",
-"https://github.com/matrix-org/synapse",
-"https://github.com/DeepLabCut/DeepLabCut",
-"https://github.com/facebookresearch/pytext",
-"https://github.com/encode/django-rest-framework",
-"https://github.com/streamlit/streamlit",
-"https://github.com/apache/incubator-superset",
-"https://github.com/scipy/scipy",
-"https://github.com/twintproject/twint",
-"https://github.com/motioneye-project/motioneye",
-"https://github.com/mahmoud/boltons",
-"https://github.com/toddmotto/public-apis",
-"https://github.com/mementum/backtrader",
-"https://github.com/securestate/king-phisher",
-"https://github.com/sherlock-project/sherlock",
-"https://github.com/kellyjonbrazil/jc",
-"https://github.com/pandas-profiling/pandas-profiling",
-"https://github.com/rocky/python-uncompyle6",
-"https://github.com/ytdl-org/youtube-dl",
-"https://github.com/TheAlgorithms/Python",
-"https://github.com/ruanyf/weekly",
-"https://github.com/google-research/football",
-"https://github.com/RasaHQ/rasa",
-"https://github.com/jackfrued/Python-100-Days",
-"https://github.com/locustio/locust",
-"https://github.com/reorx/httpstat",
-"https://github.com/plotly/plotly.py",
-"https://github.com/dmlc/dgl",
-"https://github.com/mwaskom/seaborn",
-"https://github.com/amitmerchant1990/reverie",
-"https://github.com/jupyter/notebook",
-"https://github.com/jupyterhub/jupyterhub",
-"https://github.com/numpy/numpy",
-"https://github.com/ipython/ipython",
-"https://github.com/eriklindernoren/ML-From-Scratch"]
-
-    total_fails = 0
-    total_succ = 0
-    tot_len = len(urls)
-    for url in urls:
-        print("Attempting to install:", url)
-        try: 
-            install_repo(url)
-            total_succ += 1
-        except Exception as e:
-            total_fails += 1
-            print("Error message is: ", e)
-        print("\n")
-        print("total successful installed : {total_succ}, total fails : {total_fails}")
-    print(f"Among {tot_len} repos, {total_fails} installations failed")
-        
-
+https://github.com/public-apis/public-apis
+'''
