@@ -11,6 +11,7 @@ import json
 import rpyc
 import random
 from inputimeout import inputimeout, TimeoutOccurred
+import json
 
 from r2e.execution.run_self_equiv import run_self_equiv
 from r2e.execution.execution_args import ExecutionArgs
@@ -29,20 +30,21 @@ def write_failure_mode(image_name, command, output):
 
     if not os.path.exists("failures"):
         os.makedirs("failures")
-
+    path = f"{image_name}_failures.json"
     # Check if the file is already present in the failures directory
-    if not os.path.exists(f"{image_name}_failures.json"):
+    if not os.path.exists(path):
         with open(f"failures/{image_name}_failures.json", "w") as f:
             f.write(json.dumps({
                 "command": command,
                 "output": output
             }) + "\n")
     else:
-        with open(f"failures/{image_name}_failures.json", "a") as f:
+        with open(path) as f:
             f.write(json.dumps({
                 "command": bash_command,
                 "output": output
             }) + "\n")
+    print("Wrote failure mode to file path:", path)
 
 def check_execution_status(execution_output_path = str(R2E_BUCKET_DIR) + "/testgen/temp_generate_out.json"):
     # Read the JSON output file
@@ -256,71 +258,60 @@ def install_repo(url):
     setup_container(image_name)
 
     simulator, conn = init_docker(repo_id, image_name)
-    agentic_loop(image_name, repo_name, simulator, conn)
-    print(f"Installation completed for repo with image name {image_name}")
+    #agentic_loop(image_name, repo_name, simulator, conn) # no agentic loop for now
+    oracle_result, message = installation_oracle(simulator, conn)
+    if oracle_result:
+        # Print out successful repo
+        print(f"INSTALLATION SUCCEEDED: {repo_id}")
+        return True
+    else:
+        # Print out failed repo
+        print(f"INSTALLATION FAILURE: {repo_id}")
+        print(f"ERROR MESSAGE: {message}")
+        write_failure_mode(image_name, "(ran base installation)", output)
+        return False
 
 if __name__ == "__main__":
     #Scale up repo counts here
-    urls = [ 
-    "https://github.com/dbt-labs/dbt-core",
-    "https://github.com/microsoft/playwright-python",
-    "https://github.com/ageron/handson-ml2",
-    "https://github.com/huggingface/datasets",
-    "https://github.com/slundberg/shap",
-    "https://github.com/ultralytics/yolov5",
-    "https://github.com/scanapi/scanapi",
-    "https://github.com/chiphuyen/stanford-tensorflow-tutorials",
-    "https://github.com/microsoft/ML-For-Beginners",
-    "https://github.com/The-Art-of-Hacking/h4cker",
-    "https://github.com/ageron/handson-ml",
-    "https://github.com/apache/airflow",
-    "https://github.com/sivel/speedtest-cli",
-    "https://github.com/yt-dlp/yt-dlp",
-    "https://github.com/facebookresearch/detectron2",
-    "https://github.com/kivy/kivy",
-    "https://github.com/matrix-org/synapse",
-    "https://github.com/DeepLabCut/DeepLabCut",
-    "https://github.com/facebookresearch/pytext",
-    "https://github.com/encode/django-rest-framework",
-    "https://github.com/streamlit/streamlit",
-    "https://github.com/apache/incubator-superset",
-    "https://github.com/scipy/scipy",
-    "https://github.com/twintproject/twint",
-    "https://github.com/motioneye-project/motioneye",
-    "https://github.com/mahmoud/boltons",
-    "https://github.com/toddmotto/public-apis",
-    "https://github.com/mementum/backtrader",
-    "https://github.com/securestate/king-phisher",
-    "https://github.com/sherlock-project/sherlock",
-    "https://github.com/kellyjonbrazil/jc",
-    "https://github.com/pandas-profiling/pandas-profiling",
-    "https://github.com/rocky/python-uncompyle6",
-    "https://github.com/ytdl-org/youtube-dl",
-    "https://github.com/TheAlgorithms/Python",
-    "https://github.com/ruanyf/weekly",
-    "https://github.com/google-research/football",
-    "https://github.com/RasaHQ/rasa",
-    "https://github.com/jackfrued/Python-100-Days",
-    "https://github.com/locustio/locust",
-    "https://github.com/reorx/httpstat",
-    "https://github.com/plotly/plotly.py",
-    "https://github.com/dmlc/dgl",
-    "https://github.com/mwaskom/seaborn",
-    "https://github.com/amitmerchant1990/reverie",
-    "https://github.com/jupyter/notebook",
-    "https://github.com/jupyterhub/jupyterhub",
-    "https://github.com/numpy/numpy",
-    "https://github.com/ipython/ipython",
-    "https://github.com/eriklindernoren/ML-From-Scratch"]
+
+    # Open up urls.json and read the results as a list
+    with open("urls.json", "r") as f:
+        urls = json.load(f)
+
+    print(f"Attempting to install {len(urls)} repos")
+    # also open installed_repos.json and read the results as a list
+    # check if the file even exists
+    if not os.path.exists("installed_repos.json"):
+        with open("installed_repos.json", "w") as f:
+            f.write("")
+
+    with open("installed_repos.json", "r") as f:
+        installed_repos = f.readlines()
+
+    installed_repos = [i.replace("\n", "") for i in installed_repos]
+    installed_repos = [i.replace(" ", "") for i in installed_repos]
+    installed_repos = [i for i in installed_repos if i != ""]
+
+    print("Detected installed repos:", installed_repos)
+    print("Removing already-installed repos from list...")
+    urls = [url for url in urls if url not in installed_repos]
+    print(f"Attempting to install {len(urls)} repos")
 
     total_fails = 0
     total_succ = 0
     tot_len = len(urls)
     for url in urls:
+        assert url not in installed_repos
         print("Attempting to install:", url)
         try: 
-            install_repo(url)
-            total_succ += 1
+            result = install_repo(url)
+            if result: # succeess
+                total_succ += 1
+                # Open the file installed_repos.json and write the repo name
+                with open("installed_repos.json", "a") as f:
+                    f.write(url + "\n")
+            else:
+                total_fails += 1
         except Exception as e:
             total_fails += 1
             print("Error message is: ", e)
@@ -328,47 +319,3 @@ if __name__ == "__main__":
         print(f"total successful installed : {total_succ}, total fails : {total_fails}")
     print(f"Among {tot_len} repos, {total_fails} installations failed")
 
-
-'''
-"https://github.com/donnemartin/system-design-primer",
-"https://github.com/vinta/awesome-python",
-"https://github.com/TheAlgorithms/Python",
-"https://github.com/Significant-Gravitas/Auto-GPT",
-"https://github.com/jackfrued/Python-100-Days",
-"https://github.com/AUTOMATIC1111/stable-diffusion-webui",
-"https://github.com/ytdl-org/youtube-dl",
-"https://github.com/huggingface/transformers",
-"https://github.com/hwchase17/langchain",
-"https://github.com/521xueweihan/HelloGitHub",
-"https://github.com/nvbn/thefuck",
-"https://github.com/pytorch/pytorch",
-"https://github.com/django/django",
-"https://github.com/tensorflow/models",
-"https://github.com/yt-dlp/yt-dlp",
-"https://github.com/tiangolo/fastapi",
-"https://github.com/home-assistant/core",
-"https://github.com/pallets/flask",
-"https://github.com/fighting41love/funNLP",
-"https://github.com/tensorflow/tensorflow",
-"https://github.com/psf/requests",
-"https://github.com/scikit-learn/scikit-learn",
-"https://github.com/ageitgey/face_recognition",
-"https://github.com/ansible/ansible",
-"https://github.com/localstack/localstack",
-"https://github.com/pypa/pipenv",
-"https://github.com/iperov/DeepFaceLab",
-"https://github.com/pandas-dev/pandas",
-"https://github.com/sqlmapproject/sqlmap",
-"https://github.com/mwaskom/seaborn",
-"https://github.com/graphite-project/graphite-web",
-"https://github.com/pytest-dev/pytest",
-"https://github.com/rougier/numpy-100",
-"https://github.com/joke2k/faker",
-"https://github.com/psf/black",
-"https://github.com/donnemartin/haxor-news",
-"https://github.com/google/jax",
-"https://github.com/scrapy/scrapy",
-"https://github.com/plotly/dash",
-"https://github.com/trailofbits/manticore",
-https://github.com/public-apis/public-apis
-'''
