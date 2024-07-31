@@ -1,4 +1,6 @@
 import docker
+import traceback
+
 import os
 import threading
 import queue
@@ -303,6 +305,10 @@ if __name__ == "__main__":
     for url in urls:
         assert url not in installed_repos
         print("Attempting to install:", url)
+        repo_name = url.split("/")[-1]
+        repo_author = url.split("/")[-2]
+        repo_id = repo_author + "___" + repo_name
+        image_name = "r2e:temp_" + repo_name
         try: 
             result = install_repo(url)
             if result: # succeess
@@ -315,6 +321,8 @@ if __name__ == "__main__":
         except Exception as e:
             total_fails += 1
             print("Error message is: ", e)
+            error_trace = traceback.format_exc()
+            write_failure_mode(image_name, "intallation error", error_trace)
         print("\n")
         print(f"total successful installed : {total_succ}, total fails : {total_fails}")
     print(f"Among {tot_len} repos, {total_fails} installations failed")
