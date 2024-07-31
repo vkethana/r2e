@@ -265,7 +265,7 @@ def install_repo(url):
     print(f"Installation completed for repo with image name {image_name}")
 
 if __name__ == "__main__":
-    urls = ["https://github.com/pallets/flask", "https://github.com/streamlit/streamlit", "https://github.com/r2e-project/r2e"]
+    urls = ["https://github.com/pallets/jinja.git", "https://github.com/r2e-project/r2e.git"]
     total_fails = 0
     tot_len = len(urls)
     for url in urls:

@@ -7,7 +7,7 @@ from pathlib import Path
 import fire
 
 from r2e.paths import REPOS_DIR
-from r2e.repo_builder.run_pycg import run_pycg
+from r2e.repo_builder.run_pycg import transform_path #run_pycg
 from r2e.repo_builder.repo_args import RepoArgs
 from r2e.multiprocess import run_tasks_in_parallel_iter
 
@@ -46,6 +46,7 @@ class SetupRepos:
             SetupRepos.clone_repos_from_urls(repo_urls, repo_args.cloning_multiprocess)
 
         #run_pycg(repo_args)
+        transform_path()
 
 #TODO: Modify arch change -- DONE
     @staticmethod

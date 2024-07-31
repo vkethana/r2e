@@ -7,7 +7,18 @@ from r2e.paths import REPOS_DIR, GRAPHS_DIR
 from r2e.repo_builder.repo_args import RepoArgs
 from r2e.multiprocess import run_tasks_in_parallel_iter
 from r2e.pat.callgraph import CallGraphGenerator, CallGraphProcessor
+from r2e.pat.imports.transformer import ImportTransformer
 
+
+def transform_path():
+    all_repos_clones: list[str] = sorted(os.listdir(REPOS_DIR))
+    all_repos = [
+        Repo.from_file_path(REPOS_DIR / repo_clone_name)
+        for repo_clone_name in all_repos_clones
+    ]
+    for repo in all_repos:
+        print(f"transforming path for: {repo}")
+        repo_path = ImportTransformer.transform_repo(repo.repo_path)
 
 def construct_pycg(repo: Repo):
     cgraph = CallGraphGenerator.construct_call_graph(repo.repo_path)
