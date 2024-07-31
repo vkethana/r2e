@@ -318,4 +318,5 @@ if __name__ == "__main__":
         print("\n")
         print(f"total successful installed : {total_succ}, total fails : {total_fails}")
     print(f"Among {tot_len} repos, {total_fails} installations failed")
+B
 

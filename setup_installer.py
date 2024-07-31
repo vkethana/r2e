@@ -78,7 +78,8 @@ def setup_test_container(image_name="r2e:interactive_partial_install"):
 def setup_container(image_name):
     # TODO Throw an error if either process doesn't succeed
     os.system(f"cd {R2E_REPO} && python r2e/repo_builder/docker_builder/r2e_dockerfile_builder.py  --install_batch_size 1")
-    os.system(f"cd ~/buckets/local_repoeval_bucket/repos && docker build -t {image_name} -f {R2E_REPO}/r2e/repo_builder/docker_builder/r2e_final_dockerfile.dockerfile .")
+    os.system("cd ~/buckets/local_repoeval_bucket/repos && pip install pipreqs")
+    os.system(f"pipreqs .  && docker build -t {image_name} -f {R2E_REPO}/r2e/repo_builder/docker_builder/r2e_final_dockerfile.dockerfile .")
 
 
 if __name__ == "__main__":
