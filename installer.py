@@ -151,8 +151,8 @@ def agentic_loop(image_name, repo_name, simulator, conn):
             # Put the color in green
             print(f"\033[92mSuggested command: {next_command}\033[0m")
              
-            if oracle_failures >= 3:
-                raise RuntimeError(f"Oracle has failed 3. Skipping {repo_name} installation.")
+            if oracle_failures >= 10:
+                raise RuntimeError(f"Oracle has failed 10. Skipping {repo_name} installation.")
             
 
             if next_command == "RUN ORACLE":
@@ -261,25 +261,112 @@ def install_repo(url):
 
 if __name__ == "__main__":
     #Scale up repo counts here
-    urls = ["https://github.com/pallets/jinja", 
-            "https://github.com/streamlit/streamlit",
-            "https://github.com/r2e-project/r2e", 
-            "https://github.com/jczic/ESP32-MPY-Jama.git",
-            "https://github.com/ShuhongChen/panic3d-anime-reconstruction.git",
-            "https://github.com/SUSYUSTC/MathTranslate.git",
-            "https://github.com/ymcui/Chinese-LLaMA-Alpaca.git",
-            "https://github.com/mikumifa/biliTickerBuy.git",
-            "https://github.com/isaiahbjork/Auto-GPT-MetaTrader-Plugin.git",
-            "https://github.com/sponsors/moraroy.git",]
+    urls = ["https://github.com/public-apis/public-apis",
+"https://github.com/donnemartin/system-design-primer",
+"https://github.com/vinta/awesome-python",
+"https://github.com/TheAlgorithms/Python",
+"https://github.com/Significant-Gravitas/Auto-GPT",
+"https://github.com/jackfrued/Python-100-Days",
+"https://github.com/AUTOMATIC1111/stable-diffusion-webui",
+"https://github.com/ytdl-org/youtube-dl",
+"https://github.com/huggingface/transformers",
+"https://github.com/hwchase17/langchain",
+"https://github.com/521xueweihan/HelloGitHub",
+"https://github.com/nvbn/thefuck",
+"https://github.com/pytorch/pytorch",
+"https://github.com/django/django",
+"https://github.com/tensorflow/models",
+"https://github.com/yt-dlp/yt-dlp",
+"https://github.com/tiangolo/fastapi",
+"https://github.com/home-assistant/core",
+"https://github.com/pallets/flask",
+"https://github.com/fighting41love/funNLP",
+"https://github.com/tensorflow/tensorflow",
+"https://github.com/psf/requests",
+"https://github.com/scikit-learn/scikit-learn",
+"https://github.com/ageitgey/face_recognition",
+"https://github.com/ansible/ansible",
+"https://github.com/localstack/localstack",
+"https://github.com/pypa/pipenv",
+"https://github.com/iperov/DeepFaceLab",
+"https://github.com/pandas-dev/pandas",
+"https://github.com/sqlmapproject/sqlmap",
+"https://github.com/mwaskom/seaborn",
+"https://github.com/graphite-project/graphite-web",
+"https://github.com/pytest-dev/pytest",
+"https://github.com/rougier/numpy-100",
+"https://github.com/joke2k/faker",
+"https://github.com/psf/black",
+"https://github.com/donnemartin/haxor-news",
+"https://github.com/google/jax",
+"https://github.com/scrapy/scrapy",
+"https://github.com/plotly/dash",
+"https://github.com/trailofbits/manticore",
+"https://github.com/quantumblacklabs/kedro",
+"https://github.com/dbt-labs/dbt-core",
+"https://github.com/microsoft/playwright-python",
+"https://github.com/ageron/handson-ml2",
+"https://github.com/huggingface/datasets",
+"https://github.com/slundberg/shap",
+"https://github.com/ultralytics/yolov5",
+"https://github.com/scanapi/scanapi",
+"https://github.com/chiphuyen/stanford-tensorflow-tutorials",
+"https://github.com/microsoft/ML-For-Beginners",
+"https://github.com/The-Art-of-Hacking/h4cker",
+"https://github.com/ageron/handson-ml",
+"https://github.com/apache/airflow",
+"https://github.com/sivel/speedtest-cli",
+"https://github.com/yt-dlp/yt-dlp",
+"https://github.com/facebookresearch/detectron2",
+"https://github.com/kivy/kivy",
+"https://github.com/matrix-org/synapse",
+"https://github.com/DeepLabCut/DeepLabCut",
+"https://github.com/facebookresearch/pytext",
+"https://github.com/encode/django-rest-framework",
+"https://github.com/streamlit/streamlit",
+"https://github.com/apache/incubator-superset",
+"https://github.com/scipy/scipy",
+"https://github.com/twintproject/twint",
+"https://github.com/motioneye-project/motioneye",
+"https://github.com/mahmoud/boltons",
+"https://github.com/toddmotto/public-apis",
+"https://github.com/mementum/backtrader",
+"https://github.com/securestate/king-phisher",
+"https://github.com/sherlock-project/sherlock",
+"https://github.com/kellyjonbrazil/jc",
+"https://github.com/pandas-profiling/pandas-profiling",
+"https://github.com/rocky/python-uncompyle6",
+"https://github.com/ytdl-org/youtube-dl",
+"https://github.com/TheAlgorithms/Python",
+"https://github.com/ruanyf/weekly",
+"https://github.com/google-research/football",
+"https://github.com/RasaHQ/rasa",
+"https://github.com/jackfrued/Python-100-Days",
+"https://github.com/locustio/locust",
+"https://github.com/reorx/httpstat",
+"https://github.com/plotly/plotly.py",
+"https://github.com/dmlc/dgl",
+"https://github.com/mwaskom/seaborn",
+"https://github.com/amitmerchant1990/reverie",
+"https://github.com/jupyter/notebook",
+"https://github.com/jupyterhub/jupyterhub",
+"https://github.com/numpy/numpy",
+"https://github.com/ipython/ipython",
+"https://github.com/eriklindernoren/ML-From-Scratch"]
+
     total_fails = 0
+    total_succ = 0
     tot_len = len(urls)
     for url in urls:
         print("Attempting to install:", url)
         try: 
             install_repo(url)
+            total_succ += 1
         except Exception as e:
             total_fails += 1
             print("Error message is: ", e)
+        print("\n")
+        print("total successful installed : {total_succ}, total fails : {total_fails}")
     print(f"Among {tot_len} repos, {total_fails} installations failed")
         
 
