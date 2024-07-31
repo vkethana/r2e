@@ -73,11 +73,11 @@ class ImportTransformer:
     @staticmethod
     def transform_repo(repo_path: str) -> str:
         """Applies various transformations to all imports in a Python repository."""
-        temp_path = repo_path + "_temp"
-        if os.path.exists(temp_path):
-            shutil.rmtree(temp_path)
-        temp_path = shutil.copytree(repo_path, temp_path)
-
+       # temp_path = repo_path + "_temp"
+       # if os.path.exists(temp_path):
+       #     shutil.rmtree(temp_path)
+       # temp_path = shutil.copytree(repo_path, temp_path)
+        temp_path = repo_path
         for root, _, files in os.walk(temp_path):
             for file in files:
                 if file.endswith(".py"):
