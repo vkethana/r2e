@@ -13,6 +13,7 @@ def clear_repos_folder():
     repos_folder = os.path.expanduser('~/buckets/local_repoeval_bucket/repos')
     for item in os.listdir(repos_folder):
         item_path = os.path.join(repos_folder, item)
+        print("Deleting ", item_path)
         if os.path.isfile(item_path):
             # Ask for confirmation
            # confirm = input(f"Delete {item_path}? (y/n): ")
@@ -79,7 +80,9 @@ def setup_container(image_name):
     # TODO Throw an error if either process doesn't succeed
     os.system(f"cd {R2E_REPO} && python r2e/repo_builder/docker_builder/r2e_dockerfile_builder.py  --install_batch_size 1")
     os.system("cd ~/buckets/local_repoeval_bucket/repos && pip install pipreqs")
-    os.system(f"pipreqs .  && docker build -t {image_name} -f {R2E_REPO}/r2e/repo_builder/docker_builder/r2e_final_dockerfile.dockerfile .")
+    os.system(f"pipreqs .")
+    # IMPORTANT: do NOT separate the cd and docker build commands. They must be on the same line
+    os.system(f"cd ~/buckets/local_repoeval_bucket/repos && docker build -t {image_name} -f {R2E_REPO}/r2e/repo_builder/docker_builder/r2e_final_dockerfile.dockerfile .")
 
 
 if __name__ == "__main__":
