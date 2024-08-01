@@ -1,4 +1,6 @@
 import docker
+import traceback
+
 import os
 import threading
 import queue
@@ -10,6 +12,9 @@ from openai import OpenAI
 import json
 import rpyc
 import random
+from inputimeout import inputimeout, TimeoutOccurred
+import json
+import logging
 
 from r2e.execution.run_self_equiv import run_self_equiv
 from r2e.execution.execution_args import ExecutionArgs
@@ -22,32 +27,30 @@ from r2e.paths import R2E_BUCKET_DIR
 openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 client = docker.from_env()
 
-def write_failure_mode(image_name, command, output):
-    # Write this to failures/<image_name>_failures.json
-    # Check to see if the failures directory exists
+# Check the logs directory and make it if it doesn't exist
+if not os.path.exists("logs"):
+    os.makedirs("logs")
 
-    if not os.path.exists("failures"):
-        os.makedirs("failures")
+# Set up the basic configuration for logging
+logging.basicConfig(level=logging.INFO, 
+                    format='%(asctime)s %(name)s %(levelname)s %(message)s (%(filename)s:%(lineno)d)',
+                    datefmt='%m/%d/%Y %I:%M:%S %p',
+                    handlers=[
+                        logging.FileHandler("logs/1_repo.log"),
+                        logging.StreamHandler()
+                    ])
 
-    # Check if the file is already present in the failures directory
-    if not os.path.exists(f"{image_name}_failures.json"):
-        with open(f"failures/{image_name}_failures.json", "w") as f:
-            f.write(json.dumps({
-                "command": command,
-                "output": output
-            }) + "\n")
-    else:
-        with open(f"failures/{image_name}_failures.json", "a") as f:
-            f.write(json.dumps({
-                "command": bash_command,
-                "output": output
-            }) + "\n")
+# Create a logger object
+logger = logging.getLogger(__name__)
+logger.info("This is an info message")
+logger.warning("This is a warning message")
+logger.error("This is an error message")
 
 def check_execution_status(execution_output_path = str(R2E_BUCKET_DIR) + "/testgen/temp_generate_out.json"):
     # Read the JSON output file
     with open(execution_output_path, "r") as f:
         output = json.load(f)
-    
+
     # Initialize a flag to track if we've seen any successful executions
     any_success = False
 
@@ -55,10 +58,10 @@ def check_execution_status(execution_output_path = str(R2E_BUCKET_DIR) + "/testg
     for item in output:
         test_history = item.get('test_history', {})
         history = test_history.get('history', [])
-        
+
         for entry in history:
             exec_stats = entry.get('exec_stats')
-            
+
             if exec_stats is not None:
                 # If any of them contains "error", return "ERROR"
                 if "error" in exec_stats.keys():
@@ -66,7 +69,10 @@ def check_execution_status(execution_output_path = str(R2E_BUCKET_DIR) + "/testg
                         return False, exec_stats['error']
                     except:
                         return False, "No error message found"
-    
+            else:
+                print("WARNING: At least one test did not get properly executed")
+                print("Attempting to print method id of entry :", entry.get('method_id', 'No method id found'))
+
     return True, None
 
 def installation_oracle(simulator, conn):
@@ -127,39 +133,46 @@ def human_intervention(context, last_command, last_output, oracle_result):
     return input("Please suggest the next command for the Docker container (or type 'ABORT'): ")
 
 def agentic_loop(image_name, repo_name, simulator, conn):
+    oracle_failures = 0
     try:
         context = f"Docker image: {image_name}. Partially-installed repo can be found at: /repos/{repo_name}"
         last_command = "Initial setup"
         last_output = "Container created"
         oracle_result = "Not yet consulted"
+        user_command = None
 
         while True:
-            num_consecutive_failures = 0
             print("*" * 50)
             print("Asking LLM for next command...")
-            next_command = llm_suggest_next_command(context, last_command, last_output, oracle_result)
+            if user_command:
+                next_command = user_command
+                print("Using user-suggested command:", next_command)
+                user_command = None
+            else:
+                next_command = llm_suggest_next_command(context, last_command, last_output, oracle_result)
             # Put the color in green
             print(f"\033[92mSuggested command: {next_command}\033[0m")
-            ''' 
-            if num_consecutive_failures >= 5:
-                print("Oracle has failed 5 times in a row")
-            '''
+             
+            if oracle_failures >= 10:
+                raise RuntimeError(f"Oracle has failed 10. Skipping {repo_name} installation.")
+            
 
             if next_command == "RUN ORACLE":
                 #  CASE 1: Run the Oracle
-                print("Consulting the Oracle...")
+                logger.info("Consulting the Oracle...")
                 oracle_result, message = installation_oracle(simulator, conn)
-                print(f"Oracle result: {oracle_result}")
+                logger.info(f"Oracle result: {oracle_result}")
+                logger.info(f"Oracle message: {message}")
                 last_command = next_command
                 last_output = "N/A; Oracle was consulted"
 
                 if oracle_result:
-                    print("Installation completed successfully according to the Oracle.")
+                    logger.info(f"Installation of {image_name} completed successfully according to the Oracle.")
                     break
                 else:
-                    write_failure_mode(image_name, "RUN ORACLE", output)
+                    oracle_failures += 1
+                    logger.error(f"FAILURE MODE: command = RUN ORACLE, output={message}")
             else:
-                #num_consecutive_failures = 0
                 # CASE 2: Run the suggested command
                 bash_command = "source .venv/bin/activate && " + next_command
                 bash_command = f"bash -c {shlex.quote(bash_command)}"
@@ -167,14 +180,14 @@ def agentic_loop(image_name, repo_name, simulator, conn):
                 output = output.decode('utf-8')
 
                 if exit_code != 0:
-                    print(f"Command failed with exit code {exit_code}")
+                    print(f"Command {bash_command} failed with exit code {exit_code}")
                     print("Output:")
                     print("*" * 50)
                     print(output)
                     print("*" * 50)
 
                     # Write this to failures/<image_name>_failures.json
-                    write_failure_mode(image_name, bash_command, output)
+                    logger.error(f"FAILURE MODE: command = {bash_command}, output = {output}")
 
                     if exit_code == -1 or "critical error" in output.lower():
                         human_command = human_intervention(context, next_command, output, oracle_result)
@@ -183,19 +196,26 @@ def agentic_loop(image_name, repo_name, simulator, conn):
                             break
                         next_command = human_command
                 else:
-                    print(f"Output: {output}")
-                    print("Command was executed successfully.")
+                    print(f"Command {bash_command} succeeded with exit code {exit_code} and output {output}")
 
                 last_command = next_command
                 last_output = output
                 message = "N/A; Oracle was not consulted in previous round"
 
             context += f"\nExecuted: {last_command}\nResult: {last_output}\nOracle: {message}"
+            logger.debug(f"Context updated to: {context}")
 
-            cont = input("Press Enter to continue the installation or 'q' to quit: ")
+            try:
+                cont = inputimeout(prompt="Press Enter to continue the installation or 'q' to quit or 'm' to manually suggest a command: ", timeout=0.5)
+            except TimeoutOccurred:
+                cont = ''
+
             if cont.lower() == 'q':
                 print("Installation aborted by user")
                 break
+            if cont.lower() == 'm':
+                print("Warning: Manual entry of commands is still a work in progress feature.")
+                user_command = input("Please suggest the next command for the Docker container: ")
 
     finally:
         simulator.stop_container()
@@ -203,46 +223,52 @@ def agentic_loop(image_name, repo_name, simulator, conn):
 '''
 The below two methods are used to instantiate the docker container and rpyc connection
 '''
-def get_service(repo_id: str, port: int, image_name: str) -> tuple[DockerSimulator, rpyc.Connection]:
-    simulator = DockerSimulator(repo_id=repo_id, port=port, image_name=image_name)
-    print("Simulatr created successfully")
+def get_service(repo_id: str, port: int, image_name: str, logger: None) -> tuple[DockerSimulator, rpyc.Connection]:
+    try:
+        simulator = DockerSimulator(repo_id=repo_id, port=port, image_name=image_name, logger=logger)
+    except Exception as e:
+        logger.info(f"Simulator start error -- {repo_id} -- {repr(e)}")
+        raise e
+    logger.info(f"Starting container for {repo_id}...")
     try:
         conn = rpyc.connect(
             "localhost", port, keepalive=True, config={"sync_request_timeout": 180}
         )
     except Exception as e:
-        print(f"Connection error -- {repo_id} -- {repr(e)}")
+        logger.info(f"Connection error -- {repo_id} -- {repr(e)}")
         simulator.stop_container()
         raise e
     return simulator, conn
 
-def init_docker(repo_name, image_name):
+def init_docker(repo_name, image_name, logger):
     port = random.randint(3000, 10000) # Random port
     try:
-        simulator, conn = get_service(repo_name, port, image_name)
+        assert logger is not None
+        simulator, conn = get_service(repo_name, port, image_name, logger)
         return simulator, conn
     except Exception as e:
-        print(f"Service error -- {repo_name} -- {repr(e)}")
+        logger.info(f"Service error -- {repo_name} -- {repr(e)}")
         raise e
 
-def install_repo(url):
-    '''
-    Clone, extract tests for, and install the repo at the given URL
-    '''
-    repo_name = url.split("/")[-1]
-    repo_author = url.split("/")[-2]
-    repo_id = repo_author + "___" + repo_name
-    image_name = "r2e:temp_" + repo_name
+url = "https://github.com/dbt-labs/dbt-core"
+repo_name = url.split("/")[-1]
+repo_author = url.split("/")[-2]
+repo_id = repo_author + "___" + repo_name
+image_name = "r2e:temp_" + repo_name
+simulator, conn = init_docker(repo_id, image_name, logger)
 
-    #setup_repo(url)
-    #setup_container(image_name)
+exec_args = ExecutionArgs(
+    testgen_exp_id="temp_generate",
+    execution_multiprocess=0,  # Replace with your desired number of processes
+    image_name="r2e:placeholder3"
+)
+print(f"Running Oracle self-equivalence test...")
+run_self_equiv(exec_args, simulator, conn)
+try:
+    print(f"Checking execution status...")
+    success, message = check_execution_status()
+    print(success, message)
 
-    simulator, conn = init_docker(repo_id, "r2e:temp_jinja")
-    print("Trial running installation oracle")
-    installation_oracle(simulator, conn)
-    #agentic_loop(image_name, repo_name, simulator, conn)
-    #print(f"Installation completed for repo with image name {image_name}")
+except Exception as e:
+    print(f"\nOracle result: ERROR; Exception: {e}")
 
-if __name__ == "__main__":
-    urls = ["https://github.com/numpy/numpy", "https://github.com/pallets/jinja", "https://github.com/pallets/flask", "https://github.com/pallets/jinja"]
-    install_repo(urls[-1])
