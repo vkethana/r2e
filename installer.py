@@ -29,13 +29,13 @@ client = docker.from_env()
 def write_failure_mode(image_name, command, output):
     # Write this to failures/<image_name>_failures.json
     # Check to see if the failures directory exists
-
-    if not os.path.exists("failures"):
-        os.makedirs("failures")
+    failures_dir = "failures"
+    if not os.path.exists(failures_dir):
+        os.makedirs(failures_dir)
     path = f"{image_name}_failures.json"
     # Check if the file is already present in the failures directory
     if not os.path.exists(path):
-        with open(f"failures/{image_name}_failures.json", "w") as f:
+        with open(f"{failures_dir}/{image_name}_failures.json", "w") as f:
             f.write(json.dumps({
                 "command": command,
                 "output": output
