@@ -168,3 +168,4 @@ cython_debug/
 
 r2e/repo_builder/docker_builder/r2e_final_dockerfile.dockerfile
 failures/*
+installed_repos.json
