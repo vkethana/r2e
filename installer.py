@@ -308,15 +308,15 @@ def parallel_installer(url):
         result = install_repo(url, logger)
         if result: # success
             with lock:
-                total_succ += 1
+                total_succ.value += 1
                 with open("installed_repos.json", "a") as f:
                     f.write(url + "\n")
         else:
             with lock:
-                total_fails += 1
+                total_fails.value += 1
     except Exception as e:
         with lock:
-            total_fails += 1
+            total_fails.value += 1
         print("Error message is: ", e)
 
     with lock:

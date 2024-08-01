@@ -263,7 +263,7 @@ exec_args = ExecutionArgs(
     execution_multiprocess=0,  # Replace with your desired number of processes
     image_name="r2e:placeholder3"
 )
-print(f"Running Oracle self-equivalence test...")
+print(f"Running Oracle self-equivalence test......")
 run_self_equiv(exec_args, simulator, conn)
 try:
     print(f"Checking execution status...")
