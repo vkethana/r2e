@@ -65,7 +65,7 @@ def run_fut_mp(args: tuple[FunctionUnderTest | MethodUnderTest, str]) -> tuple[b
     output = run_fut_with_port(fut, port, image_name)
     return output
 
-def run_self_equiv(exec_args: ExecutionArgs, simulator=None, conn=None):
+def run_self_equiv(exec_args: ExecutionArgs, simulator=None, conn=None, logger=None):
     assert (simulator != None)
     futs = load_functions_under_test(TESTGEN_DIR / f"{exec_args.testgen_exp_id}.json")
     #futs = Tests(tests={})
@@ -93,7 +93,7 @@ def run_self_equiv(exec_args: ExecutionArgs, simulator=None, conn=None):
                 #print("Passing in fut ", fut)
                 output = run_fut_with_port(fut, port, simulator, conn)
             except Exception as e:
-                print(f"Error@{fut.repo_id}:\n{repr(e)}")
+                logger.error(f"Error running FUT at {fut.repo_id}:{repr(e)}")
                 tb = traceback.format_exc()
                 print(tb)
                 continue

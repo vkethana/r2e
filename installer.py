@@ -14,6 +14,7 @@ import rpyc
 import random
 from inputimeout import inputimeout, TimeoutOccurred
 import json
+import logging
 
 from r2e.execution.run_self_equiv import run_self_equiv
 from r2e.execution.execution_args import ExecutionArgs
@@ -26,27 +27,24 @@ from r2e.paths import R2E_BUCKET_DIR
 openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 client = docker.from_env()
 
-def write_failure_mode(image_name, command, output):
-    # Write this to failures/<image_name>_failures.json
-    # Check to see if the failures directory exists
-    failures_dir = "failures"
-    if not os.path.exists(failures_dir):
-        os.makedirs(failures_dir)
-    path = f"{image_name}_failures.json"
-    # Check if the file is already present in the failures directory
-    if not os.path.exists(path):
-        with open(f"{failures_dir}/{image_name}_failures.json", "w") as f:
-            f.write(json.dumps({
-                "command": command,
-                "output": output
-            }) + "\n")
-    else:
-        with open(path) as f:
-            f.write(json.dumps({
-                "command": bash_command,
-                "output": output
-            }) + "\n")
-    print("Wrote failure mode to file path:", path)
+# Check the logs directory and make it if it doesn't exist
+if not os.path.exists("logs"):
+    os.makedirs("logs")
+
+# Set up the basic configuration for logging
+logging.basicConfig(level=logging.INFO, 
+                    format='%(asctime)s %(name)s %(levelname)s %(message)s (%(filename)s:%(lineno)d)',
+                    datefmt='%m/%d/%Y %I:%M:%S %p',
+                    handlers=[
+                        logging.FileHandler("logs/1_repo.log"),
+                        logging.StreamHandler()
+                    ])
+
+# Create a logger object
+logger = logging.getLogger(__name__)
+logger.info("This is an info message")
+logger.warning("This is a warning message")
+logger.error("This is an error message")
 
 def check_execution_status(execution_output_path = str(R2E_BUCKET_DIR) + "/testgen/temp_generate_out.json"):
     # Read the JSON output file
@@ -161,18 +159,19 @@ def agentic_loop(image_name, repo_name, simulator, conn):
 
             if next_command == "RUN ORACLE":
                 #  CASE 1: Run the Oracle
-                print("Consulting the Oracle...")
+                logger.info("Consulting the Oracle...")
                 oracle_result, message = installation_oracle(simulator, conn)
-                print(f"Oracle result: {oracle_result}")
+                logger.info(f"Oracle result: {oracle_result}")
+                logger.info(f"Oracle message: {message}")
                 last_command = next_command
                 last_output = "N/A; Oracle was consulted"
 
                 if oracle_result:
-                    print("Installation completed successfully according to the Oracle.")
+                    logger.info(f"Installation of {image_name} completed successfully according to the Oracle.")
                     break
                 else:
                     oracle_failures += 1
-                    write_failure_mode(image_name, "RUN ORACLE", output)
+                    logger.error(f"FAILURE MODE: command = RUN ORACLE, output={message}")
             else:
                 # CASE 2: Run the suggested command
                 bash_command = "source .venv/bin/activate && " + next_command
@@ -181,14 +180,14 @@ def agentic_loop(image_name, repo_name, simulator, conn):
                 output = output.decode('utf-8')
 
                 if exit_code != 0:
-                    print(f"Command failed with exit code {exit_code}")
+                    print(f"Command {bash_command} failed with exit code {exit_code}")
                     print("Output:")
                     print("*" * 50)
                     print(output)
                     print("*" * 50)
 
                     # Write this to failures/<image_name>_failures.json
-                    write_failure_mode(image_name, bash_command, output)
+                    logger.error(f"FAILURE MODE: command = {bash_command}, output = {output}")
 
                     if exit_code == -1 or "critical error" in output.lower():
                         human_command = human_intervention(context, next_command, output, oracle_result)
@@ -197,14 +196,14 @@ def agentic_loop(image_name, repo_name, simulator, conn):
                             break
                         next_command = human_command
                 else:
-                    print(f"Output: {output}")
-                    print("Command was executed successfully.")
+                    print(f"Command {bash_command} succeeded with exit code {exit_code} and output {output}")
 
                 last_command = next_command
                 last_output = output
                 message = "N/A; Oracle was not consulted in previous round"
 
             context += f"\nExecuted: {last_command}\nResult: {last_output}\nOracle: {message}"
+            logger.debug(f"Context updated to: {context}")
 
             try:
                 cont = inputimeout(prompt="Press Enter to continue the installation or 'q' to quit or 'm' to manually suggest a command: ", timeout=0.5)
@@ -224,29 +223,34 @@ def agentic_loop(image_name, repo_name, simulator, conn):
 '''
 The below two methods are used to instantiate the docker container and rpyc connection
 '''
-def get_service(repo_id: str, port: int, image_name: str) -> tuple[DockerSimulator, rpyc.Connection]:
-    simulator = DockerSimulator(repo_id=repo_id, port=port, image_name=image_name)
-    print("Simulatr created successfully")
+def get_service(repo_id: str, port: int, image_name: str, logger: None) -> tuple[DockerSimulator, rpyc.Connection]:
+    try:
+        simulator = DockerSimulator(repo_id=repo_id, port=port, image_name=image_name, logger=logger)
+    except Exception as e:
+        logger.info(f"Simulator start error -- {repo_id} -- {repr(e)}")
+        raise e
+    logger.info(f"Starting container for {repo_id}...")
     try:
         conn = rpyc.connect(
             "localhost", port, keepalive=True, config={"sync_request_timeout": 180}
         )
     except Exception as e:
-        print(f"Connection error -- {repo_id} -- {repr(e)}")
+        logger.info(f"Connection error -- {repo_id} -- {repr(e)}")
         simulator.stop_container()
         raise e
     return simulator, conn
 
-def init_docker(repo_name, image_name):
+def init_docker(repo_name, image_name, logger):
     port = random.randint(3000, 10000) # Random port
     try:
-        simulator, conn = get_service(repo_name, port, image_name)
+        assert logger is not None
+        simulator, conn = get_service(repo_name, port, image_name, logger)
         return simulator, conn
     except Exception as e:
-        print(f"Service error -- {repo_name} -- {repr(e)}")
+        logger.info(f"Service error -- {repo_name} -- {repr(e)}")
         raise e
 
-def install_repo(url):
+def install_repo(url, logger):
     '''
     Clone, extract tests for, and install the repo at the given URL
     '''
@@ -256,31 +260,29 @@ def install_repo(url):
     image_name = "r2e:temp_" + repo_name
 
     # Check if repo has already been inst
-    setup_repo(url)
-    setup_container(image_name)
+    #setup_repo(url)
+    #setup_container(image_name)
 
-    simulator, conn = init_docker(repo_id, image_name)
+    simulator, conn = init_docker(repo_id, image_name, logger)
     #agentic_loop(image_name, repo_name, simulator, conn) # no agentic loop for now
     oracle_result, message = installation_oracle(simulator, conn)
     if oracle_result:
         # Print out successful repo
-        print(f"INSTALLATION SUCCEEDED: {repo_id}")
+        logger.info(f"INSTALLATION SUCCEEDED: {repo_id}")
         return True
     else:
         # Print out failed repo
-        print(f"INSTALLATION FAILURE: {repo_id}")
-        print(f"ERROR MESSAGE: {message}")
-        write_failure_mode(image_name, "(ran base installation)", output)
+        logger.info(f"INSTALLATION FAILURE: {repo_id}")
+        logger.error(f"FAILURE MODE: command = RUN ORACLE, output = {message}")
+        #write_failure_mode(image_name, "(ran base installation)", output)
         return False
 
 if __name__ == "__main__":
-    #Scale up repo counts here
-
     # Open up urls.json and read the results as a list
     with open("urls.json", "r") as f:
         urls = json.load(f)
 
-    print(f"Attempting to install {len(urls)} repos")
+    logger.info(f"Attempting to install {len(urls)} repos")
     # also open installed_repos.json and read the results as a list
     # check if the file even exists
     if not os.path.exists("installed_repos.json"):
@@ -294,23 +296,23 @@ if __name__ == "__main__":
     installed_repos = [i.replace(" ", "") for i in installed_repos]
     installed_repos = [i for i in installed_repos if i != ""]
 
-    print("Detected installed repos:", installed_repos)
-    print("Removing already-installed repos from list...")
+    logger.info(f"Detected installed repos: {installed_repos}")
+    logger.info("Removing already-installed repos from list...")
     urls = [url for url in urls if url not in installed_repos]
-    print(f"Attempting to install {len(urls)} repos")
+    logger.info(f"Attempting to install {len(urls)} repos")
 
     total_fails = 0
     total_succ = 0
     tot_len = len(urls)
     for url in urls:
         assert url not in installed_repos
-        print("Attempting to install:", url)
+        logger.info(f"Attempting to install: {url}")
         repo_name = url.split("/")[-1]
         repo_author = url.split("/")[-2]
         repo_id = repo_author + "___" + repo_name
         image_name = "r2e:temp_" + repo_name
-        try: 
-            result = install_repo(url)
+        try:
+            result = install_repo(url, logger)
             if result: # succeess
                 total_succ += 1
                 # Open the file installed_repos.json and write the repo name
@@ -320,11 +322,8 @@ if __name__ == "__main__":
                 total_fails += 1
         except Exception as e:
             total_fails += 1
-            print("Error message is: ", e)
+            logger.info(f"Error message is: {repr(e)}")
             error_trace = traceback.format_exc()
-            write_failure_mode(image_name, "intallation error", error_trace)
-        print("\n")
-        print(f"total successful installed : {total_succ}, total fails : {total_fails}")
-    print(f"Among {tot_len} repos, {total_fails} installations failed")
-B
-
+            logger.info("FAILURE MODE: command = (attempted to run installer), output = {error_trace}")
+        logger.info(f"Repo installation finished. Total successful installed: {total_succ}, total fails: {total_fails}")
+    logger.info(f"Among {tot_len} repos, {total_fails} installations failed")
