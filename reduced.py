@@ -32,7 +32,7 @@ if not os.path.exists("logs"):
     os.makedirs("logs")
 
 # Set up the basic configuration for logging
-logging.basicConfig(level=logging.INFO, 
+logging.basicConfig(level=logging.DEBUG, 
                     format='%(asctime)s %(name)s %(levelname)s %(message)s (%(filename)s:%(lineno)d)',
                     datefmt='%m/%d/%Y %I:%M:%S %p',
                     handlers=[
@@ -45,6 +45,7 @@ logger = logging.getLogger(__name__)
 logger.info("This is an info message")
 logger.warning("This is a warning message")
 logger.error("This is an error message")
+logger.debug("This is a debug message")
 
 def check_execution_status(execution_output_path = str(R2E_BUCKET_DIR) + "/testgen/temp_generate_out.json"):
     # Read the JSON output file
