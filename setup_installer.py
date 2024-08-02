@@ -84,7 +84,7 @@ def setup_container(image_name, repo_path):
             os.system(f"cd {R2E_REPO} && python r2e/repo_builder/docker_builder/r2e_dockerfile_builder.py --install_batch_size 1")
             os.system(f"cd {repo_path} && pip install pipreqs")
             os.system(f"cd {repo_path} && pipreqs . --force")
-            os.system(f"cd {repo_path} && docker build -t {image_name} -f {R2E_REPO}/r2e/repo_builder/docker_builder/r2e_final_dockerfile.dockerfile .")
+            os.system(f"cd ~/buckets/local_repoeval_bucket/repos && docker build -t {image_name} -f {R2E_REPO}/r2e/repo_builder/docker_builder/r2e_final_dockerfile.dockerfile .")
         else:
             print(f"Docker image for {image_name} already exists. Skipping build.")
 
