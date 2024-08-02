@@ -1,11 +1,11 @@
 import os
 import json
 import random
-
+from multiprocessing import Lock
 from r2e.paths import HOME_DIR
-
+import docker
 R2E_REPO = HOME_DIR / "r2e"
-
+lock = Lock()
 def clear_repos_folder():
     # Check if there are any files or folders in ~/buckets/local_repoeval_bucket/repos
     # If there are, for each file/folder ask the user for confirmation before deleting
@@ -77,13 +77,25 @@ def setup_test_container(image_name="r2e:interactive_partial_install"):
     os.system(f"cd ~/buckets/local_repoeval_bucket/repos && docker build -t {image_name} -f {dockerfile_path} .")
 
 def setup_container(image_name):
-    # TODO Throw an error if either process doesn't succeed
-    os.system(f"cd {R2E_REPO} && python r2e/repo_builder/docker_builder/r2e_dockerfile_builder.py  --install_batch_size 1")
-    os.system("cd ~/buckets/local_repoeval_bucket/repos && pip install pipreqs")
-    os.system(f"pipreqs .")
-    # IMPORTANT: do NOT separate the cd and docker build commands. They must be on the same line
-    os.system(f"cd ~/buckets/local_repoeval_bucket/repos && docker build -t {image_name} -f {R2E_REPO}/r2e/repo_builder/docker_builder/r2e_final_dockerfile.dockerfile .")
+    with lock:
+        if not docker_image_exists(image_name):
+            print(f"Building Docker image for {image_name}...")
+            os.system(f"cd {R2E_REPO} && python r2e/repo_builder/docker_builder/r2e_dockerfile_builder.py --install_batch_size 1")
+            os.system("cd ~/buckets/local_repoeval_bucket/repos && pip install pipreqs")
+            os.system("pipreqs .")
+            os.system(f"cd ~/buckets/local_repoeval_bucket/repos && docker build -t {image_name} -f {R2E_REPO}/r2e/repo_builder/docker_builder/r2e_final_dockerfile.dockerfile .")
+        else:
+            print(f"Docker image for {image_name} already exists. Skipping build.")
 
+            
+def docker_image_exists(image_name):
+    # Check if the Docker image already exists
+    client = docker.from_env()
+    try:
+        client.images.get(image_name)
+        return True
+    except docker.errors.ImageNotFound:
+        return False
 
 if __name__ == "__main__":
     # Assume repo has already been cloned

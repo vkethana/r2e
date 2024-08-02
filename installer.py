@@ -170,93 +170,6 @@ def human_intervention(context, last_command, last_output, oracle_result):
     return input("Please suggest the next command for the Docker container (or type 'ABORT'): ")
 
 
-def agentic_loop(image_name, repo_name, simulator, conn):
-    oracle_failures = 0
-    try:
-        context = f"Docker image: {image_name}. Partially-installed repo can be found at: /repos/{repo_name}"
-        last_command = "Initial setup"
-        last_output = "Container created"
-        oracle_result = "Not yet consulted"
-        user_command = None
-
-        while True:
-            print("*" * 50)
-            print("Asking LLM for next command...")
-            if user_command:
-                next_command = user_command
-                print("Using user-suggested command:", next_command)
-                user_command = None
-            else:
-                next_command = llm_suggest_next_command(context, last_command, last_output, oracle_result)
-            # Put the color in green
-            print(f"\033[92mSuggested command: {next_command}\033[0m")
-             
-            if oracle_failures >= 10:
-                raise RuntimeError(f"Oracle has failed 10. Skipping {repo_name} installation.")
-            
-
-            if next_command == "RUN ORACLE":
-                #  CASE 1: Run the Oracle
-                logger.info("Consulting the Oracle...")
-                oracle_result, message = installation_oracle(simulator, conn)
-                logger.info(f"Oracle result: {oracle_result}")
-                logger.info(f"Oracle message: {message}")
-                last_command = next_command
-                last_output = "N/A; Oracle was consulted"
-
-                if oracle_result:
-                    logger.info(f"Installation of {image_name} completed successfully according to the Oracle.")
-                    break
-                else:
-                    oracle_failures += 1
-                    logger.error(f"FAILURE MODE: command = RUN ORACLE, output={message}")
-            else:
-                # CASE 2: Run the suggested command
-                bash_command = "source .venv/bin/activate && " + next_command
-                bash_command = f"bash -c {shlex.quote(bash_command)}"
-                exit_code, output = simulator.run_single_command(bash_command)
-                output = output.decode('utf-8')
-
-                if exit_code != 0:
-                    print(f"Command {bash_command} failed with exit code {exit_code}")
-                    print("Output:")
-                    print("*" * 50)
-                    print(output)
-                    print("*" * 50)
-
-                    # Write this to failures/<image_name>_failures.json
-                    logger.error(f"FAILURE MODE: command = {bash_command}, output = {output}")
-
-                    if exit_code == -1 or "critical error" in output.lower():
-                        human_command = human_intervention(context, next_command, output, oracle_result)
-                        if human_command.upper() == 'ABORT':
-                            print("Installation aborted by human intervention")
-                            break
-                        next_command = human_command
-                else:
-                    print(f"Command {bash_command} succeeded with exit code {exit_code} and output {output}")
-
-                last_command = next_command
-                last_output = output
-                message = "N/A; Oracle was not consulted in previous round"
-
-            context += f"\nExecuted: {last_command}\nResult: {last_output}\nOracle: {message}"
-            logger.debug(f"Context updated to: {context}")
-
-            try:
-                cont = inputimeout(prompt="Press Enter to continue the installation or 'q' to quit or 'm' to manually suggest a command: ", timeout=0.5)
-            except TimeoutOccurred:
-                cont = ''
-
-            if cont.lower() == 'q':
-                print("Installation aborted by user")
-                break
-            if cont.lower() == 'm':
-                print("Warning: Manual entry of commands is still a work in progress feature.")
-                user_command = input("Please suggest the next command for the Docker container: ")
-
-    finally:
-        simulator.stop_container()
 
 
 '''
@@ -293,8 +206,7 @@ def init_docker(repo_name, image_name, logger):
 def parallel_installer(url):
     global total_fails, total_succ
     repo_name = url.split("/")[-1]
-    repo_author = url.split("/")[-2]
-    image_name = "r2e:temp_" + repo_name
+
 
     with lock:
         if url in installed_repos:
@@ -320,7 +232,7 @@ def parallel_installer(url):
         print("Error message is: ", e)
 
     with lock:
-        print(f"Total successful installs: {total_succ}, total fails: {total_fails}")
+        print(f"Total successful installs: {total_succ.value}, total fails: {total_fails.value}")
 
 def install_repo(url, logger):
     '''
@@ -385,6 +297,6 @@ if __name__ == "__main__":
         print(f"Doing parallel installation on {tot_len} repositories.")
         pool.map(parallel_installer, urls)
 
-    print(f"Among {tot_len} repos, {total_fails} installations failed")
+    print(f"Among {tot_len} repos, {total_fails.value} installations failed, {total_succ.value} successful")
 
 
