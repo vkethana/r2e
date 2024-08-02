@@ -14,7 +14,12 @@ def main(repo_args: RepoArgs):
     num_repos = len(os.listdir(REPOS_DIR))
     batch_size = repo_args.install_batch_size
 
-    dockerfile += f"COPY . /repos\n\n"
+    url = repo_args.repo_url
+    repo_name = url.split("/")[-1]
+    repo_author = url.split("/")[-2]
+    repo_id = repo_author + "___" + repo_name
+
+    dockerfile += f"COPY . /repos/{repo_id}\n\n"
 
     dockerfile += f"WORKDIR /install_code\n\n"
 

@@ -242,10 +242,13 @@ def install_repo(url, logger):
     repo_author = url.split("/")[-2]
     repo_id = repo_author + "___" + repo_name
     image_name = "r2e:temp_" + repo_name
+    repo_path = "~/buckets/local_repoeval_bucket/repos/" + repo_id
+
+    print(f"Installing on repo_path: {repo_path}\n")
 
     # Check if repo has already been inst
     setup_repo(url)
-    setup_container(image_name)
+    setup_container(image_name, repo_path)
 
     simulator, conn = init_docker(repo_id, image_name, logger)
     #agentic_loop(image_name, repo_name, simulator, conn) # no agentic loop for now
