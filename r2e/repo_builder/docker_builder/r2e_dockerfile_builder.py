@@ -16,6 +16,7 @@ def main(repo_args: RepoArgs):
 
     dockerfile += f"COPY . /repos\n\n"
 
+    #dockerfile += f"COPY ./requirements.txt /install_code/requirements.txt\n\n"  
     dockerfile += f"WORKDIR /install_code\n\n"
 
     dockerfile += f"RUN pip install -r requirements.txt\n\n"

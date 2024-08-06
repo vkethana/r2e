@@ -1,0 +1,76 @@
+{
+    "Installation Summary": {
+        "total": 50,
+        "fails": 38,
+        "successes": 12,
+        "success rate": 0.24
+    },
+    "Failed Installations": {
+        "ModuleNotFoundError (22)": [
+            "https://github.com/public-apis/public-apis",
+            "https://github.com/donnemartin/system-design-primer",
+            "https://github.com/Significant-Gravitas/Auto-GPT",
+            "https://github.com/jackfrued/Python-100-Days",
+            "https://github.com/huggingface/transformers",
+            "https://github.com/hwchase17/langchain",
+            "https://github.com/521xueweihan/HelloGitHub",
+            "https://github.com/pytorch/pytorch",
+            "https://github.com/tensorflow/models",
+            "https://github.com/yt-dlp/yt-dlp",
+            "https://github.com/home-assistant/core",
+            "https://github.com/scikit-learn/scikit-learn",
+            "https://github.com/ageitgey/face_recognition",
+            "https://github.com/ansible/ansible",
+            "https://github.com/iperov/DeepFaceLab",
+            "https://github.com/trailofbits/manticore",
+            "https://github.com/ultralytics/yolov5",
+            "https://github.com/scanapi/scanapi",
+            "https://github.com/chiphuyen/stanford-tensorflow-tutorials",
+            "https://github.com/microsoft/ML-For-Beginners",
+            "https://github.com/The-Art-of-Hacking/h4cker",
+            "https://github.com/ageron/handson-ml"
+        ],
+        "ImportError (12)": [
+            "https://github.com/ytdl-org/youtube-dl",
+            "https://github.com/nvbn/thefuck",
+            "https://github.com/pallets/flask",
+            "https://github.com/tensorflow/tensorflow",
+            "https://github.com/pypa/pipenv",
+            "https://github.com/pytest-dev/pytest",
+            "https://github.com/joke2k/faker",
+            "https://github.com/google/jax",
+            "https://github.com/scrapy/scrapy",
+            "https://github.com/plotly/dash",
+            "https://github.com/huggingface/datasets",
+            "https://github.com/slundberg/shap"
+        ],
+        "KeyError (1)": [
+            "https://github.com/django/django"
+        ],
+        "UnsupportedOperation (1)": [
+            "https://github.com/sqlmapproject/sqlmap"
+        ],
+        "ImproperlyConfigured (1)": [
+            "https://github.com/graphite-project/graphite-web"
+        ],
+        "NameError (1)": [
+            "https://github.com/donnemartin/haxor-news"
+        ]
+    },
+    "Successful Installations": {
+        "Successes (12)": [
+            "https://github.com/dbt-labs/dbt-core",
+            "https://github.com/vinta/awesome-python",
+            "https://github.com/quantumblacklabs/kedro",
+            "https://github.com/rougier/numpy-100",
+            "https://github.com/TheAlgorithms/Python",
+            "https://github.com/ageron/handson-ml2",
+            "https://github.com/tiangolo/fastapi",
+            "https://github.com/psf/requests",
+            "https://github.com/fighting41love/funNLP",
+            "https://github.com/microsoft/playwright-python",
+            "https://github.com/psf/black",
+            "https://github.com/mwaskom/seaborn"
+        ]
+    }
+}

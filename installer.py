@@ -1,10 +1,8 @@
 import docker
 import traceback
 
-import multiprocessing
 import os
 import threading
-import concurrent.futures
 import queue
 import shlex
 import sys
@@ -17,6 +15,7 @@ import random
 from inputimeout import inputimeout, TimeoutOccurred
 import json
 import logging
+import time
 
 from r2e.execution.run_self_equiv import run_self_equiv
 from r2e.execution.execution_args import ExecutionArgs
@@ -28,14 +27,6 @@ from r2e.paths import R2E_BUCKET_DIR
 
 openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 client = docker.from_env()
-
-
-# Using multiprocessing for parallel installation
-lock = multiprocessing.Lock()
-manager = multiprocessing.Manager()
-total_fails = manager.Value('i', 0)
-total_succ = manager.Value('i', 0)
-installed_repos = manager.list()
 
 def write_failure_mode(image_name, command, output):
     # Write this to failures/<image_name>_failures.json
@@ -63,6 +54,8 @@ def write_failure_mode(image_name, command, output):
 if not os.path.exists("logs"):
     os.makedirs("logs")
 
+# Ensure the local time is used
+logging.Formatter.converter = time.localtime
 # Set up the basic configuration for logging
 logging.basicConfig(level=logging.DEBUG, 
                     format='%(asctime)s %(name)s %(levelname)s %(message)s (%(filename)s:%(lineno)d)',
@@ -203,37 +196,6 @@ def init_docker(repo_name, image_name, logger):
         raise e
 
 
-def parallel_installer(url):
-    global total_fails, total_succ
-    repo_name = url.split("/")[-1]
-
-
-    with lock:
-        if url in installed_repos:
-            print(f"URL {url} is already installed. Skipping.")
-            return
-        installed_repos.append(url)
-
-    print("Attempting to install:", url)
-    
-    try: 
-        result = install_repo(url, logger)
-        if result: # success
-            with lock:
-                total_succ.value += 1
-                with open("installed_repos.json", "a") as f:
-                    f.write(url + "\n")
-        else:
-            with lock:
-                total_fails.value += 1
-    except Exception as e:
-        with lock:
-            total_fails.value += 1
-        print("Error message is: ", e)
-
-    with lock:
-        print(f"Total successful installs: {total_succ.value}, total fails: {total_fails.value}")
-
 def install_repo(url, logger):
     '''
     Clone, extract tests for, and install the repo at the given URL
@@ -248,7 +210,8 @@ def install_repo(url, logger):
 
     # Check if repo has already been inst
     setup_repo(url)
-    setup_container(image_name, repo_path)
+    setup_container(image_name)
+
 
     simulator, conn = init_docker(repo_id, image_name, logger)
     #agentic_loop(image_name, repo_name, simulator, conn) # no agentic loop for now
@@ -286,20 +249,35 @@ if __name__ == "__main__":
     logger.info(f"Detected installed repos: {installed_repos}")
     logger.info("Removing already-installed repos from list...")
     urls = [url for url in urls if url not in installed_repos]
-    logger.info(f"Attempting to install {len(urls)} repos")
+    logger.info(f"Attempting to install {len(urls)} repos\n")
 
 
 
-    total_fails.value = 0
-    total_succ.value = 0
+    total_fails = 0
+    total_succ = 0
     tot_len = len(urls)
 
-
-    # Use multiprocessing for parallel execution
-    with multiprocessing.Pool() as pool:
-        print(f"Doing parallel installation on {tot_len} repositories.")
-        pool.map(parallel_installer, urls)
-
-    print(f"Among {tot_len} repos, {total_fails.value} installations failed, {total_succ.value} successful")
-
+    for url in urls:
+        assert url not in installed_repos
+        logger.info(f"Attempting to install: {url}\n")
+        repo_name = url.split("/")[-1]
+        repo_author = url.split("/")[-2]
+        repo_id = repo_author + "___" + repo_name
+        image_name = "r2e:temp_" + repo_name
+        try:
+            result = install_repo(url, logger)
+            if result: # succeess
+                total_succ += 1
+                # Open the file installed_repos.json and write the repo name
+                with open("installed_repos.json", "a") as f:
+                    f.write(url + "\n")
+            else:
+                total_fails += 1
+        except Exception as e:
+            total_fails += 1
+            logger.info(f"Error message is: {repr(e)}\n")
+            error_trace = traceback.format_exc()
+            logger.info("FAILURE MODE: command = (attempted to run installer), output = {error_trace}\n")
+        logger.info(f"Repo installation finished. Total successful installed: {total_succ}, total fails: {total_fails}\n")
+    logger.info(f"Among {tot_len} repos, {total_fails} installations failed")
 

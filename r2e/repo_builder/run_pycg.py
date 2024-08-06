@@ -15,7 +15,7 @@ def transform_path():
         for repo_clone_name in all_repos_clones
     ]
     for repo in all_repos:
-        print(f"transforming path for: {repo}")
+        print(f"Transforming to absolute path for: {repo}")
         repo_path = ImportTransformer.transform_repo(repo.repo_path)
 
 def construct_pycg(repo: Repo):
