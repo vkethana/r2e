@@ -210,7 +210,7 @@ def install_repo(url, logger):
 
     # Check if repo has already been inst
     setup_repo(url)
-    setup_container(image_name)
+    #setup_container(image_name)
 
 
     simulator, conn = init_docker(repo_id, image_name, logger)
@@ -229,7 +229,7 @@ def install_repo(url, logger):
 
 if __name__ == "__main__":
     # Open up urls.json and read the results as a list
-    with open("urls.json", "r") as f:
+    with open("nomodule_urls.json", "r") as f:
         urls = json.load(f)
 
     logger.info(f"Attempting to install {len(urls)} repos")
