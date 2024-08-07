@@ -19,7 +19,7 @@ ENV PATH="/opt/anaconda/bin:${PATH}"
 
 ADD https://api.github.com/repos/vkethana/r2e-docker-setup/git/refs/heads/pdm-fix-2 version.json 
 
-RUN git clone -b pdm-fix-2 https://github.com/vkethana/r2e-docker-setup.git /install_code
+RUN git clone -b setuptools-fix https://github.com/vkethana/r2e-docker-setup.git /install_code
 COPY . /repos
 
 WORKDIR /install_code
