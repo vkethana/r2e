@@ -263,9 +263,6 @@ def install_repo_from_url(url):
         result = install_repo(url, logger)
         if result: # succeess
             total_succ += 1
-            # Open the file installed_repos.json and write the repo name
-            with open("installed_repos.json", "a") as f:
-                f.write(url + "\n")
         else:
             total_fails += 1
     except Exception as e:
