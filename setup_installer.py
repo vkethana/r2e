@@ -30,17 +30,17 @@ def clone_repos(url):
     command = f"python r2e/repo_builder/setup_repos.py --repo_url {url}"
     os.system(command)
 
-def extract_data():
+def extract_data(repo_id):
     # Extract data from all repos
-    command = "python r2e/repo_builder/extract_func_methods.py --overwrite_extracted True"
+    command = f"python r2e/repo_builder/extract_func_methods.py --overwrite_extracted True --exp_id {repo_id} --repo_id {repo_id}"
     os.system(command)
 
-def reduce_data():
+def reduce_data(repo_id):
     # Trim down the extracted data
-    # Open up the extracted file (~/buckets/r2e_bucket/extracted_data/temp_extracted.json)
+    # Open up the extracted file (~/buckets/r2e_bucket/extracted_data/{repo_id}_extracted.json)
     # It consists of a list of JSON objects. Possibly hundreds. Trim it down to just num_funcs (let num_funcs=5). Select the num_funcs tests at random
     num_funcs = 5
-    extracted_file_path = os.path.expanduser('~/buckets/r2e_bucket/extracted_data/temp_extracted.json')
+    extracted_file_path = os.path.expanduser(f"~/buckets/r2e_bucket/extracted_data/{repo_id}_extracted.json")
 
     # Read the extracted data
     with open(extracted_file_path, 'r') as f:
@@ -54,17 +54,26 @@ def reduce_data():
     with open(extracted_file_path, 'w') as f:
         json.dump(data, f, indent=4)
 
-def make_equiv_test():
+def make_equiv_test(repo_id):
     # Generate the equivalence tests
-    command="python r2e/generators/testgen/generate.py -i temp_extracted.json --multiprocess 0"
+    command = f"python r2e/generators/testgen/generate.py -i {repo_id}_extracted.json --multiprocess 16 --exp_id {repo_id}"
     os.system(command)
 
-def setup_repo(url):
-    clear_repos_folder()
+def setup_repo(url,repo_id,clear_existing_repos=False):
+    if clear_existing_repos:
+        print("Clearing existing repos...")
+        clear_repos_folder()
+    else:
+        print("Skipping clearing existing repos...")
+
+    print("Cloning new repo...")
     clone_repos(url)
-    extract_data()
-    reduce_data()
-    make_equiv_test()
+    print("Extracting tests...")
+    extract_data(repo_id)
+    print("Reducing number of tests...")
+    reduce_data(repo_id)
+    print("Generating equivalence tests...")
+    make_equiv_test(repo_id)
 
 def setup_test_container(image_name="r2e:interactive_partial_install"):
     clone_repos("https://github.com/psf/requests")
@@ -74,8 +83,8 @@ def setup_test_container(image_name="r2e:interactive_partial_install"):
     dockerfile_path = R2E_REPO + " r2e/repo_builder/docker_builder/base_dockerfile.dockerfile. "
     os.system(f"cd ~/buckets/local_repoeval_bucket/repos && docker build -t {image_name} -f {dockerfile_path} .")
 
-def setup_container(image_name):
-    os.system(f"cd {R2E_REPO} && python r2e/repo_builder/docker_builder/r2e_dockerfile_builder.py --install_batch_size 1")
+def setup_container(image_name, repo_id):
+    os.system(f"cd {R2E_REPO} && python r2e/repo_builder/docker_builder/r2e_dockerfile_builder.py --install_batch_size 1 --repo_id {repo_id}")
     #os.system(f"cd ~/buckets/local_repoeval_bucket/repos && pip install pipreqs")
     #os.system(f"cd ~/buckets/local_repoeval_bucket/repos && pipreqs . --force")
     os.system(f"cd ~/buckets/local_repoeval_bucket/repos && docker build -t {image_name} -f {R2E_REPO}/r2e/repo_builder/docker_builder/r2e_final_dockerfile.dockerfile .")

@@ -12,9 +12,10 @@ def main(repo_args: RepoArgs):
         dockerfile = f.read()
 
     num_repos = len(os.listdir(REPOS_DIR))
+    repo_id = repo_args.repo_id
     batch_size = repo_args.install_batch_size
 
-    dockerfile += f"COPY . /repos\n\n"
+    dockerfile += f"COPY {repo_id} /repos/{repo_id}\n\n"
 
     #dockerfile += f"COPY ./requirements.txt /install_code/requirements.txt\n\n"  
     dockerfile += f"WORKDIR /install_code\n\n"

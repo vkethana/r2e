@@ -61,7 +61,7 @@ logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(name)s %(levelname)s %(message)s (%(filename)s:%(lineno)d)',
                     datefmt='%m/%d/%Y %I:%M:%S %p',
                     handlers=[
-                        logging.FileHandler("logs/1_repo.log"),
+                        logging.FileHandler("logs/1_repo_vj.log"),
                         logging.StreamHandler()
                     ])
 
@@ -162,9 +162,6 @@ def human_intervention(context, last_command, last_output, oracle_result):
     print(f"Oracle result: {oracle_result}")
     return input("Please suggest the next command for the Docker container (or type 'ABORT'): ")
 
-
-
-
 '''
 The below two methods are used to instantiate the docker container and rpyc connection
 '''
@@ -209,9 +206,8 @@ def install_repo(url, logger):
     print(f"Installing on repo_path: {repo_path}\n")
 
     # Check if repo has already been inst
-    setup_repo(url)
-    #setup_container(image_name)
-
+    #setup_repo(url, repo_id, clear_existing_repos=True)
+    #setup_container(image_name, repo_id)
 
     simulator, conn = init_docker(repo_id, image_name, logger)
     #agentic_loop(image_name, repo_name, simulator, conn) # no agentic loop for now
@@ -250,8 +246,6 @@ if __name__ == "__main__":
     logger.info("Removing already-installed repos from list...")
     urls = [url for url in urls if url not in installed_repos]
     logger.info(f"Attempting to install {len(urls)} repos\n")
-
-
 
     total_fails = 0
     total_succ = 0

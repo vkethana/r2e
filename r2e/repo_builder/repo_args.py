@@ -44,6 +44,12 @@ class RepoArgs(BaseModel):
         description="Number of repositories to install in parallel",
     )
 
+    # repo_id
+    repo_id: str = Field(
+        "PLACEHOLDER_REPO_ID",
+        description="The ID of the repository you want to clone into the Docker container / extract tests from"
+    )
+
     ## extraction args
     exp_id: str = Field(
         "temp",

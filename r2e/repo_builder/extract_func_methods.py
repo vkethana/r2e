@@ -40,7 +40,10 @@ def build_functions_and_methods(repo_args: RepoArgs):
     for repo_dir in repo_dirs:
         remove_bom_from_directory(str(repo_dir))  
 
-    repos = [Repo.from_file_path(str(repo_dir)) for repo_dir in repo_dirs]
+    #repos = [Repo.from_file_path(str(repo_dir)) for repo_dir in repo_dirs]
+    repo_id = repo_args.repo_id
+    assert (repo_id != "PLACEHOLDER_REPO_ID")
+    repos = [Repo.from_file_path(str(REPOS_DIR / repo_id))]
 
     functions = []
     methods = []
