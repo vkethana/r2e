@@ -29,8 +29,8 @@ class R2ETestGenerator:
         """Generate tests for functions"""
         functions = load_functions(EXTRACTED_DATA_DIR / args.in_file)
 
-        tasks = R2ETestGenerator.prepare_tasks(functions)
-        payloads = [task.chat_messages for task in tasks]
+        #tasks = R2ETestGenerator.prepare_tasks(functions)
+        #payloads = [task.chat_messages for task in tasks]
 
         #outputs = LLMCompletions.get_llm_completions(args, payloads)
 
