@@ -16,6 +16,7 @@ from inputimeout import inputimeout, TimeoutOccurred
 import json
 import logging
 import time
+from concurrent.futures import ProcessPoolExecutor
 
 from r2e.execution.run_self_equiv import run_self_equiv
 from r2e.execution.execution_args import ExecutionArgs
