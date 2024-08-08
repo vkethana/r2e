@@ -2,6 +2,7 @@ import docker
 import traceback
 
 import os
+import multiprocessing as mp
 import threading
 import queue
 import shlex
@@ -17,6 +18,7 @@ import json
 import logging
 import time
 from concurrent.futures import ProcessPoolExecutor
+import signal
 
 from r2e.execution.run_self_equiv import run_self_equiv
 from r2e.execution.execution_args import ExecutionArgs
@@ -273,6 +275,17 @@ def install_repo_from_url(url):
         logger.info("FAILURE MODE: command = (attempted to run installer), output = {error_trace}\n")
     logger.info(f"Repo installation finished. Total successful installed: {total_succ}, total fails: {total_fails}\n")
 
+# Define a function to handle the SIGINT signal (Ctrl+C)
+def signal_handler(sig, frame):
+    print("Caught SIGINT, terminating child processes...")
+    
+    # Terminate all child processes
+    for process in mp.active_children():
+        process.terminate()
+
+    # Exit the main process
+    sys.exit(0)
+
 def parallel_execution(function, args, max_workers=None):
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
         executor.map(function, args)
@@ -291,6 +304,7 @@ if __name__ == "__main__":
     total_succ = 0
     tot_len = len(urls)
     '''
+    #Doesn't work due to conflicting logger variables (variables are not private between function calls?)
     run_tasks_in_parallel(
         install_repo_from_url,
         urls,
@@ -300,6 +314,7 @@ if __name__ == "__main__":
         progress_bar_desc="Installing repos..."
     )
     '''
+    signal.signal(signal.SIGINT, signal_handler)
     parallel_execution(install_repo_from_url, urls, max_workers=2)
 
     #print(f"Among {tot_len} repos, {total_fails} installations failed")
