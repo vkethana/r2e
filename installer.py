@@ -21,12 +21,44 @@ from r2e.execution.run_self_equiv import run_self_equiv
 from r2e.execution.execution_args import ExecutionArgs
 from r2e.execution.r2e_simulator import DockerSimulator
 from r2e.execution.execute_futs import self_equiv_futs
+from r2e.multiprocess import run_tasks_in_parallel
 
 from setup_installer import setup_repo, setup_container
-from r2e.paths import R2E_BUCKET_DIR
+from r2e.paths import R2E_BUCKET_DIR, REPOS_DIR, EXTRACTED_DATA_DIR, TESTGEN_DIR, REPOS_DIR, EXTRACTED_DATA_DIR, TESTGEN_DIR
 
 openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 client = docker.from_env()
+
+def setup_logger(path, repo_id):
+    # Check the logs directory and make it if it doesn't exist
+    if not os.path.exists("logs"):
+        os.makedirs("logs")
+
+    # Ensure the local time is used
+    logging.Formatter.converter = time.localtime
+    # Set up the basic configuration for logging
+    logging.basicConfig(level=logging.DEBUG, 
+                        format=f'%(asctime)s %(name)s %(levelname)s %(message)s (%(filename)s:%(lineno)d) ({repo_id})',
+                        datefmt='%m/%d/%Y %I:%M:%S %p',
+                        handlers=[
+                            logging.FileHandler(path),
+                            logging.StreamHandler()
+                        ])
+
+    # Create a logger object
+    logger = logging.getLogger(__name__)
+    # Silence debug messages from docker and urlib
+    logging.getLogger("docker.utils.config").setLevel(logging.WARNING)
+    logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
+
+    # All four of these should show on stdout
+    logger.info("This is an info message")
+    logger.warning("This is a warning message")
+    logger.error("This is an error message")
+    logger.debug("This is a debug message")
+
+    print("Successfuly set up logger at path ", path)
+    return logger
 
 def write_failure_mode(image_name, command, output):
     # Write this to failures/<image_name>_failures.json
@@ -49,30 +81,6 @@ def write_failure_mode(image_name, command, output):
                 "output": output
             }) + "\n")
     print("Wrote failure mode to file path:", path)
-
-# Check the logs directory and make it if it doesn't exist
-if not os.path.exists("logs"):
-    os.makedirs("logs")
-
-# Ensure the local time is used
-logging.Formatter.converter = time.localtime
-# Set up the basic configuration for logging
-logging.basicConfig(level=logging.DEBUG, 
-                    format='%(asctime)s %(name)s %(levelname)s %(message)s (%(filename)s:%(lineno)d)',
-                    datefmt='%m/%d/%Y %I:%M:%S %p',
-                    handlers=[
-                        logging.FileHandler("logs/1_repo_vj.log"),
-                        logging.StreamHandler()
-                    ])
-
-# Create a logger object
-logger = logging.getLogger(__name__)
-
-# All four of these should show on stdout
-logger.info("This is an info message")
-logger.warning("This is a warning message")
-logger.error("This is an error message")
-logger.debug("This is a debug message")
 
 
 def check_execution_status(execution_output_path = str(R2E_BUCKET_DIR) + "/testgen/temp_generate_out.json"):
@@ -201,13 +209,30 @@ def install_repo(url, logger):
     repo_author = url.split("/")[-2]
     repo_id = repo_author + "___" + repo_name
     image_name = "r2e:temp_" + repo_name
-    repo_path = "~/buckets/local_repoeval_bucket/repos/" + repo_id
+    #repo_path = "~/buckets/local_repoeval_bucket/repos/" + repo_id
+    repo_path = REPOS_DIR / repo_id
 
     print(f"Installing on repo_path: {repo_path}\n")
 
-    # Check if repo has already been inst
-    #setup_repo(url, repo_id, clear_existing_repos=True)
-    #setup_container(image_name, repo_id)
+    # Check if repo has already been installed
+
+    #cloned_repo_exists = os.path.exists(REPOS_DIR / repo_id)
+    #extracted_tests_exist = os.path.exists(EXTRACTED_DATA_DIR / f"{repo_id}_extracted.json")
+    testgen_exists = os.path.exists(TESTGEN_DIR / f"{repo_id}_generate.json")
+    docker_image_exists = any([image_name in image.tags for image in client.images.list()])
+    #setup_repo_already_done = cloned_repo_exists and extracted_tests_exist and testgen_exists
+    # Important: cloned_repo_exists and extracted_tests_exist don't do anything right now. 
+    # all that matters is whether the testgen file and docker image exist
+
+    if not testgen_exists:
+        setup_repo(url, repo_id, clear_existing_repos=True)
+    else:
+        logger.info("Skipping repository setup")
+
+    if not docker_image_exists:
+        setup_container(image_name, repo_id)
+    else:
+        logger.info("Skipping dockerfile build")
 
     simulator, conn = init_docker(repo_id, image_name, logger)
     #agentic_loop(image_name, repo_name, simulator, conn) # no agentic loop for now
@@ -223,55 +248,57 @@ def install_repo(url, logger):
         #write_failure_mode(image_name, "(ran base installation)", output)
         return False
 
+def install_repo_from_url(url):
+    repo_name = url.split("/")[-1]
+    repo_author = url.split("/")[-2]
+    repo_id = repo_author + "___" + repo_name
+    image_name = "r2e:temp_" + repo_name
+
+    logger = setup_logger(f"logs/{repo_id}_install.log", repo_id)
+    logger.info(f"Attempting to install: {url}\n")
+    try:
+        result = install_repo(url, logger)
+        if result: # succeess
+            total_succ += 1
+            # Open the file installed_repos.json and write the repo name
+            with open("installed_repos.json", "a") as f:
+                f.write(url + "\n")
+        else:
+            total_fails += 1
+    except Exception as e:
+        total_fails += 1
+        logger.info(f"Error message is: {repr(e)}\n")
+        error_trace = traceback.format_exc()
+        logger.info("FAILURE MODE: command = (attempted to run installer), output = {error_trace}\n")
+    logger.info(f"Repo installation finished. Total successful installed: {total_succ}, total fails: {total_fails}\n")
+
+def parallel_execution(function, args, max_workers=None):
+    with ProcessPoolExecutor(max_workers=max_workers) as executor:
+        executor.map(function, args)
+
 if __name__ == "__main__":
     # Open up urls.json and read the results as a list
     with open("nomodule_urls.json", "r") as f:
         urls = json.load(f)
 
-    logger.info(f"Attempting to install {len(urls)} repos")
-    # also open installed_repos.json and read the results as a list
-    # check if the file even exists
-    if not os.path.exists("installed_repos.json"):
-        with open("installed_repos.json", "w") as f:
-            f.write("")
+    print(f"Attempting to install {len(urls)} repos")
 
-    with open("installed_repos.json", "r") as f:
-        installed_repos = f.readlines()
-
-    installed_repos = [i.replace("\n", "") for i in installed_repos]
-    installed_repos = [i.replace(" ", "") for i in installed_repos]
-    installed_repos = [i for i in installed_repos if i != ""]
-
-    logger.info(f"Detected installed repos: {installed_repos}")
-    logger.info("Removing already-installed repos from list...")
-    urls = [url for url in urls if url not in installed_repos]
-    logger.info(f"Attempting to install {len(urls)} repos\n")
+    # TODO: Get total_fails, total_succ to work with multiprocessing
+    # Might need to use locks? shared variables? 
 
     total_fails = 0
     total_succ = 0
     tot_len = len(urls)
+    '''
+    run_tasks_in_parallel(
+        install_repo_from_url,
+        urls,
+        num_workers=2,
+        timeout_per_task=None,
+        use_progress_bar=True,
+        progress_bar_desc="Installing repos..."
+    )
+    '''
+    parallel_execution(install_repo_from_url, urls, max_workers=2)
 
-    for url in urls:
-        assert url not in installed_repos
-        logger.info(f"Attempting to install: {url}\n")
-        repo_name = url.split("/")[-1]
-        repo_author = url.split("/")[-2]
-        repo_id = repo_author + "___" + repo_name
-        image_name = "r2e:temp_" + repo_name
-        try:
-            result = install_repo(url, logger)
-            if result: # succeess
-                total_succ += 1
-                # Open the file installed_repos.json and write the repo name
-                with open("installed_repos.json", "a") as f:
-                    f.write(url + "\n")
-            else:
-                total_fails += 1
-        except Exception as e:
-            total_fails += 1
-            logger.info(f"Error message is: {repr(e)}\n")
-            error_trace = traceback.format_exc()
-            logger.info("FAILURE MODE: command = (attempted to run installer), output = {error_trace}\n")
-        logger.info(f"Repo installation finished. Total successful installed: {total_succ}, total fails: {total_fails}\n")
-    logger.info(f"Among {tot_len} repos, {total_fails} installations failed")
-
+    #print(f"Among {tot_len} repos, {total_fails} installations failed")
