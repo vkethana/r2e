@@ -12,6 +12,7 @@ with open(config_path, "r") as file:
 
 HOME_DIR = Path(os.path.expanduser("~"))
 R2E_BUCKET_DIR = HOME_DIR / config["r2e_bucket_dir"]
+LOCAL_EVAL_DIR = HOME_DIR / "buckets" / "local_repoeval_bucket"
 REPOS_DIR = HOME_DIR / config["repos_dir"]
 CACHE_DIR = HOME_DIR / config["cache_dir"]
 
