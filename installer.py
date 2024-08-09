@@ -99,7 +99,7 @@ def write_failure_mode(image_name, command, output):
     print("Wrote failure mode to file path:", path)
 
 
-def check_execution_status(execution_output_path = str(R2E_BUCKET_DIR) + "/testgen/temp_generate_out.json"):
+def check_execution_status(execution_output_path):
     # Read the JSON output file
     with open(execution_output_path, "r") as f:
         output = json.load(f)
@@ -147,7 +147,8 @@ def installation_oracle(simulator, conn, repo_id):
     #command = f"python r2e/execution/run_self_equiv.py --testgen_exp_id temp_generate --image_name {image_name} --execution_multiprocess 0"
     try:
         print(f"Checking execution status...")
-        success, message = check_execution_status()
+
+        success, message = check_execution_status(str(TESTGEN_DIR) + f"/{repo_id}_generate_out.json")
         print(success, message)
         return success, message
 
