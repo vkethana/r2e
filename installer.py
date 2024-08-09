@@ -37,21 +37,32 @@ def setup_logger(path, repo_id):
     if not os.path.exists("logs"):
         os.makedirs("logs")
 
-    # Ensure the local time is used
-    logging.Formatter.converter = time.localtime
-    logger = logging.getLogger(__name__)
-    # Set up the basic configuration for logging
-    logging.basicConfig(level=logging.DEBUG, 
-                        format=f'%(asctime)s %(name)s %(levelname)s %(message)s (%(filename)s:%(lineno)d) ({repo_id})',
-                        datefmt='%m/%d/%Y %I:%M:%S %p',
-                        handlers=[
-                            logging.FileHandler(path),
-                            logging.StreamHandler()
-                        ])
-
     # Create a logger object
+    logger = logging.getLogger(f"logger_{repo_id}")
+    logger.setLevel(logging.DEBUG)
 
-    # Silence debug messages from docker and urlib
+    # Ensure the local time is used
+    formatter = logging.Formatter(
+        fmt=f'%(asctime)s %(name)s %(levelname)s %(message)s (%(filename)s:%(lineno)d) ({repo_id})',
+        datefmt='%m/%d/%Y %I:%M:%S %p'
+    )
+    formatter.converter = time.localtime
+
+    # Create file handler
+    file_handler = logging.FileHandler(path)
+    file_handler.setLevel(logging.DEBUG)
+    file_handler.setFormatter(formatter)
+
+    # Create stream handler
+    stream_handler = logging.StreamHandler()
+    stream_handler.setLevel(logging.DEBUG)
+    stream_handler.setFormatter(formatter)
+
+    # Add handlers to logger
+    logger.addHandler(file_handler)
+    logger.addHandler(stream_handler)
+
+    # Silence debug messages from docker and urllib
     logging.getLogger("docker.utils.config").setLevel(logging.WARNING)
     logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
 
@@ -61,7 +72,8 @@ def setup_logger(path, repo_id):
     logger.error("This is an error message")
     logger.debug("This is a debug message")
 
-    print("Successfuly set up logger at path ", path)
+    print("Successfully set up logger at path ", path)
+
     return logger
 
 def write_failure_mode(image_name, command, output):
