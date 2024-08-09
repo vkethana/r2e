@@ -233,10 +233,8 @@ def install_repo(url, logger):
 
     # Check if repo has already been installed
 
-    print(f"WE want to see {LOCAL_EVAL_DIR}, {REPOS_DIR}, {EXTRACTED_DATA_DIR}, {TESTGEN_DIR}, {R2E_BUCKET_DIR}\n")
 
     for directory in [LOCAL_EVAL_DIR, REPOS_DIR, R2E_BUCKET_DIR, EXTRACTED_DATA_DIR, TESTGEN_DIR]:
-        print(f">>>>>>>>>>>>>>>>>>>>>{directory}")
         if not directory.exists():
             directory.mkdir()
             print(f"Newly created directory: {directory}\n")
