@@ -128,11 +128,13 @@ def check_execution_status(execution_output_path = str(R2E_BUCKET_DIR) + "/testg
 
     return True, None
 
-def installation_oracle(simulator, conn):
+def installation_oracle(simulator, conn, repo_id):
     # This function abstracts the verification command
 
+    print(f"TEST ID CHECK: {repo_id}_generate")
+
     exec_args = ExecutionArgs(
-        testgen_exp_id="temp_generate",
+        testgen_exp_id=f"{repo_id}_generate",
         execution_multiprocess=0,  # Replace with your desired number of processes
         image_name="r2e:placeholder3"
     )
@@ -265,7 +267,7 @@ def install_repo(url, logger):
 
     simulator, conn = init_docker(repo_id, image_name, logger)
     #agentic_loop(image_name, repo_name, simulator, conn) # no agentic loop for now
-    oracle_result, message = installation_oracle(simulator, conn)
+    oracle_result, message = installation_oracle(simulator, conn, repo_id)
     if oracle_result:
         # Print out successful repo
         logger.info(f"INSTALLATION SUCCEEDED: {repo_id}")

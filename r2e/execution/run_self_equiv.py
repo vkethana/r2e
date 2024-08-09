@@ -66,6 +66,7 @@ def run_fut_mp(args: tuple[FunctionUnderTest | MethodUnderTest, str]) -> tuple[b
     return output
 
 def run_self_equiv(exec_args: ExecutionArgs, simulator=None, conn=None, logger=None):
+    print(f"{exec_args.testgen_exp_id}.json")
     assert (simulator != None)
     futs = load_functions_under_test(TESTGEN_DIR / f"{exec_args.testgen_exp_id}.json")
     #futs = Tests(tests={})
@@ -73,7 +74,7 @@ def run_self_equiv(exec_args: ExecutionArgs, simulator=None, conn=None, logger=N
     for fut in futs:
        fut.test_history.history = [{}] # << edit this as per the type
     '''
-    #print(futs)
+    print("PRINTING OUT FUTS", futs)
     #print(type(futs))
     #sample_test = Function(function_id="", file="")
     #futs = Tests(tests={"": "", "": "", "": ""})
