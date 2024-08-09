@@ -62,7 +62,7 @@ def make_equiv_test(repo_id):
 def setup_repo(url,repo_id,clear_existing_repos=False):
     if clear_existing_repos:
         print("Clearing existing repos...")
-        clear_repos_folder()
+        #clear_repos_folder()
     else:
         print("Skipping clearing existing repos...")
 

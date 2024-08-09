@@ -27,7 +27,7 @@ from r2e.execution.execute_futs import self_equiv_futs
 from r2e.multiprocess import run_tasks_in_parallel
 
 from setup_installer import setup_repo, setup_container
-from r2e.paths import R2E_BUCKET_DIR, REPOS_DIR, EXTRACTED_DATA_DIR, TESTGEN_DIR, REPOS_DIR, EXTRACTED_DATA_DIR, TESTGEN_DIR
+from r2e.paths import R2E_BUCKET_DIR, TESTGEN_DIR, REPOS_DIR, EXTRACTED_DATA_DIR, LOCAL_EVAL_DIR
 
 openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 client = docker.from_env()
@@ -37,20 +37,32 @@ def setup_logger(path, repo_id):
     if not os.path.exists("logs"):
         os.makedirs("logs")
 
-    # Ensure the local time is used
-    logging.Formatter.converter = time.localtime
-    # Set up the basic configuration for logging
-    logging.basicConfig(level=logging.DEBUG, 
-                        format=f'%(asctime)s %(name)s %(levelname)s %(message)s (%(filename)s:%(lineno)d) ({repo_id})',
-                        datefmt='%m/%d/%Y %I:%M:%S %p',
-                        handlers=[
-                            logging.FileHandler(path),
-                            logging.StreamHandler()
-                        ])
-
     # Create a logger object
-    logger = logging.getLogger(__name__)
-    # Silence debug messages from docker and urlib
+    logger = logging.getLogger(f"logger_{repo_id}")
+    logger.setLevel(logging.DEBUG)
+
+    # Ensure the local time is used
+    formatter = logging.Formatter(
+        fmt=f'%(asctime)s %(name)s %(levelname)s %(message)s (%(filename)s:%(lineno)d) ({repo_id})',
+        datefmt='%m/%d/%Y %I:%M:%S %p'
+    )
+    formatter.converter = time.localtime
+
+    # Create file handler
+    file_handler = logging.FileHandler(path)
+    file_handler.setLevel(logging.DEBUG)
+    file_handler.setFormatter(formatter)
+
+    # Create stream handler
+    stream_handler = logging.StreamHandler()
+    stream_handler.setLevel(logging.DEBUG)
+    stream_handler.setFormatter(formatter)
+
+    # Add handlers to logger
+    logger.addHandler(file_handler)
+    logger.addHandler(stream_handler)
+
+    # Silence debug messages from docker and urllib
     logging.getLogger("docker.utils.config").setLevel(logging.WARNING)
     logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
 
@@ -60,7 +72,8 @@ def setup_logger(path, repo_id):
     logger.error("This is an error message")
     logger.debug("This is a debug message")
 
-    print("Successfuly set up logger at path ", path)
+    print("Successfully set up logger at path ", path)
+
     return logger
 
 def write_failure_mode(image_name, command, output):
@@ -195,6 +208,7 @@ def get_service(repo_id: str, port: int, image_name: str, logger: None) -> tuple
 
 def init_docker(repo_name, image_name, logger):
     port = random.randint(3000, 10000) # Random port
+    #print(f"PORT NUMBER IS: {port} !!!!!!!!!!!!!!\n")
     try:
         assert logger is not None
         simulator, conn = get_service(repo_name, port, image_name, logger)
@@ -204,7 +218,7 @@ def init_docker(repo_name, image_name, logger):
         raise e
 
 
-def install_repo(url, logger):
+def install_repo(url, logger): 
     '''
     Clone, extract tests for, and install the repo at the given URL
     '''
@@ -219,6 +233,15 @@ def install_repo(url, logger):
 
     # Check if repo has already been installed
 
+
+    for directory in [LOCAL_EVAL_DIR, REPOS_DIR, R2E_BUCKET_DIR, EXTRACTED_DATA_DIR, TESTGEN_DIR]:
+        if not directory.exists():
+            directory.mkdir()
+            print(f"Newly created directory: {directory}\n")
+
+
+
+
     #cloned_repo_exists = os.path.exists(REPOS_DIR / repo_id)
     #extracted_tests_exist = os.path.exists(EXTRACTED_DATA_DIR / f"{repo_id}_extracted.json")
     testgen_exists = os.path.exists(TESTGEN_DIR / f"{repo_id}_generate.json")
@@ -226,6 +249,9 @@ def install_repo(url, logger):
     #setup_repo_already_done = cloned_repo_exists and extracted_tests_exist and testgen_exists
     # Important: cloned_repo_exists and extracted_tests_exist don't do anything right now. 
     # all that matters is whether the testgen file and docker image exist
+
+
+
 
     if not testgen_exists:
         setup_repo(url, repo_id, clear_existing_repos=True)
