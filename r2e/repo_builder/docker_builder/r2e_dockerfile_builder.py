@@ -11,7 +11,8 @@ def main(repo_args: RepoArgs):
     with open("r2e/repo_builder/docker_builder/r2e_base_dockerfile.txt", "r") as f:
         dockerfile = f.read()
 
-    num_repos = len(os.listdir(REPOS_DIR))
+    #num_repos = len(os.listdir(REPOS_DIR))
+    num_repos = 1 # hard code to one repo
     repo_id = repo_args.repo_id
     batch_size = repo_args.install_batch_size
 
