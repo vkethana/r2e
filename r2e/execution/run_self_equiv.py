@@ -74,7 +74,7 @@ def run_self_equiv(exec_args: ExecutionArgs, simulator=None, conn=None, logger=N
     for fut in futs:
        fut.test_history.history = [{}] # << edit this as per the type
     '''
-    print("PRINTING OUT FUTS", futs)
+    #print("PRINTING OUT FUTS", futs)
     #print(type(futs))
     #sample_test = Function(function_id="", file="")
     #futs = Tests(tests={"": "", "": "", "": ""})
