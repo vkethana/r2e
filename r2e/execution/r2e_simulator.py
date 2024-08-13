@@ -46,16 +46,19 @@ class DockerSimulator:
             # network_mode="host",
             **docker_kwargs,
         )
+        print("Starting docker container...")
         try:
             while self.container.status != "running":
                 sleep(1)
                 self.container.reload()
         except Exception as e:
+            print("Failed to start docker container")
             self.logger.info(f"Container start error {repr(e)}")
             self.stop_container()
 
     def run_single_command(self, command: str):
         output = ""
+        self.logger.debug(f"r2e_simulator.py: repo_id = {self.repo_id} attempting to run {command}")
         try:
             exit_code, output = self.container.exec_run(
                 command,
@@ -63,13 +66,16 @@ class DockerSimulator:
                 #timeout=100,
             )
             if exit_code != 0:
-                self.logger.debug(f"r2e_simulator.py: repo_id = {self.repo_id} ran into error {command}")
+                self.logger.debug(f"r2e_simulator.py: repo_id = {self.repo_id} ran into error {command}. The error was: {output}")
+                print(f"***DEBUG*** r2e_simulator.py: repo_id = {self.repo_id} ran into error {command}. The error was: {output}")
             else:
                 self.logger.debug(f"r2e_simulator.py: repo_id = {self.repo_id} ran {command} and got output {output}")
+                print(f"r2e_simulator.py: repo_id = {self.repo_id} ran {command} and got output {output}")
             return exit_code, output
 
         except Exception as e:
             self.logger.error(f"r2e_simulator.py: repo_id = {self.repo_id}, workdir = {self.workdir}. Ran {command} and got start error {repr(e)}")
+            print(f"***DEBUG*** r2e_simulator.py: repo_id = {self.repo_id}, workdir = {self.workdir}. Ran {command} and got start error {repr(e)}")
             self.stop_container()
         return -1, "ERROR: Failed to execute command inside Docker container"
 

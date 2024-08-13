@@ -128,7 +128,7 @@ def check_execution_status(execution_output_path):
 
     return True, None
 
-def installation_oracle(simulator, conn, repo_id):
+def installation_oracle(simulator, conn, repo_id, logger):
     # This function abstracts the verification command
 
     print(f"TEST ID CHECK: {repo_id}_generate")
@@ -141,7 +141,8 @@ def installation_oracle(simulator, conn, repo_id):
 
     print(f"Running Oracle self-equivalence test...")
     # Run the self_equiv function
-    run_self_equiv(exec_args, simulator, conn)
+    run_self_equiv(exec_args, simulator, conn, logger)
+    print("Done running self-equivalence test")
 
     # This file contains the output of the execution
     #command = f"python r2e/execution/run_self_equiv.py --testgen_exp_id temp_generate --image_name {image_name} --execution_multiprocess 0"
@@ -263,7 +264,7 @@ def install_repo(url, logger):
 
     simulator, conn = init_docker(repo_id, image_name, logger)
     #agentic_loop(image_name, repo_name, simulator, conn) # no agentic loop for now
-    oracle_result, message = installation_oracle(simulator, conn, repo_id)
+    oracle_result, message = installation_oracle(simulator, conn, repo_id, logger)
     if oracle_result:
         # Print out successful repo
         logger.info(f"INSTALLATION SUCCEEDED: {repo_id}")
@@ -320,18 +321,16 @@ def install_repo_from_url(url):
 
     logger = setup_logger(f"logs/{repo_id}_install.log", repo_id)
     logger.info(f"Attempting to install: {url}\n")
-    try:
-        result = install_repo(url, logger)
-        if result: # succeess
-            total_succ += 1
-        else:
-            total_fails += 1
-    except Exception as e:
+
+    result = install_repo(url, logger)
+    logger.info(f"Repo installation finished. Result: {result}")
+    '''
+    if result: # succeess
+        total_succ += 1
+    else:
         total_fails += 1
-        logger.info(f"Error message is: {repr(e)}\n")
-        error_trace = traceback.format_exc()
-        logger.info("FAILURE MODE: command = (attempted to run installer), output = {error_trace}\n")
-    logger.info(f"Repo installation finished. Total successful installed: {total_succ}, total fails: {total_fails}\n")
+    '''
+    #logger.info(f"Repo installation finished. Total successful installed: {total_succ}, total fails: {total_fails}\n")
 
 # Define a function to handle the SIGINT signal (Ctrl+C)
 def signal_handler(sig, frame):
@@ -345,8 +344,11 @@ def signal_handler(sig, frame):
     sys.exit(0)
 
 def parallel_execution(function, args, max_workers=None):
-    with ProcessPoolExecutor(max_workers=max_workers) as executor:
-        executor.map(function, args)
+    try:
+        with ProcessPoolExecutor(max_workers=max_workers) as executor:
+            executor.map(function, args)
+    except Exception as e:
+        print(f"Error: {e}")
 
 if __name__ == "__main__":
     # Open up urls.json and read the results as a list
@@ -362,5 +364,19 @@ if __name__ == "__main__":
     total_succ = 0
     tot_len = len(urls)
 
-    signal.signal(signal.SIGINT, signal_handler)
-    parallel_execution(install_repo_from_url, urls, max_workers=2)
+    #signal.signal(signal.SIGINT, signal_handler)
+    #parallel_execution(install_repo_from_url, urls, max_workers=2)
+
+    outputs = run_tasks_in_parallel(
+        install_repo_from_url,
+        urls,
+        num_workers=2,
+        timeout_per_task=None,
+        use_progress_bar=True,
+        progress_bar_desc="Installing repos..."
+    )
+    for x in outputs:
+        if x.is_success():
+            print(f"Success: {x}")
+        else:
+            print(f"Error: {x.exception_tb}")

@@ -65,10 +65,14 @@ def run_fut_mp(args: tuple[FunctionUnderTest | MethodUnderTest, str]) -> tuple[b
     output = run_fut_with_port(fut, port, image_name)
     return output
 
-def run_self_equiv(exec_args: ExecutionArgs, simulator=None, conn=None, logger=None):
-    print(f"{exec_args.testgen_exp_id}.json")
+def run_self_equiv(exec_args, simulator, conn, logger):
+    print("Made it into run_self_equiv")
+    return
+    logger.info(f"Running FUTs from {exec_args.testgen_exp_id}.json")
+    print("simulator: ", simulator)
     assert (simulator != None)
     futs = load_functions_under_test(TESTGEN_DIR / f"{exec_args.testgen_exp_id}.json")
+    logger.info(f"There are {len(futs)} FUTs to run.")
     #futs = Tests(tests={})
     '''
     for fut in futs:
@@ -91,20 +95,17 @@ def run_self_equiv(exec_args: ExecutionArgs, simulator=None, conn=None, logger=N
             port = exec_args.port
             try:
                 #output = run_fut_with_port(fut, port, exec_args.image_name)
-                #print("Passing in fut ", fut)
+                logger.debug("Currently executing FUT:", fut)
                 output = run_fut_with_port(fut, port, simulator, conn)
             except Exception as e:
                 logger.error(f"Error running FUT at {fut.repo_id}:{repr(e)}")
                 tb = traceback.format_exc()
-                print(tb)
-                continue
-            '''
             if (output[0]):
-                print(f"Test {i} passed successfully!")
+                logger.info(f"Test {i} passed successfully!")
             else:
-                print(f"ERROR: Test {i} failed!")
-                print("Result of failed test:", output[1])
-            '''
+                logger.info(f"ERROR: Test {i} failed!")
+                logger.info(f"Output of failed test: {output[1]}")
+                #print("Result of failed test:", output[1])
             #print("Result of FUT, 2: ", output[2]) #output[2] is the raw FUT object, 
             # which in most cases you dont need to actually see
             new_futs.append(output[2])
