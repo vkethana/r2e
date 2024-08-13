@@ -66,8 +66,6 @@ def run_fut_mp(args: tuple[FunctionUnderTest | MethodUnderTest, str]) -> tuple[b
     return output
 
 def run_self_equiv(exec_args, simulator, conn, logger):
-    print("Made it into run_self_equiv")
-    return
     logger.info(f"Running FUTs from {exec_args.testgen_exp_id}.json")
     print("simulator: ", simulator)
     assert (simulator != None)
