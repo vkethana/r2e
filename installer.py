@@ -19,6 +19,7 @@ import logging
 import time
 from concurrent.futures import ProcessPoolExecutor
 import signal
+import tarfile
 
 from r2e.execution.run_self_equiv import run_self_equiv
 from r2e.execution.execution_args import ExecutionArgs
@@ -97,7 +98,6 @@ def write_failure_mode(image_name, command, output):
                 "output": output
             }) + "\n")
     print("Wrote failure mode to file path:", path)
-
 
 def check_execution_status(execution_output_path):
     # Read the JSON output file
@@ -220,8 +220,7 @@ def init_docker(repo_name, image_name, logger):
         logger.info(f"Service error -- {repo_name} -- {repr(e)}")
         raise e
 
-
-def install_repo(url, logger): 
+def install_repo(url, logger):
     '''
     Clone, extract tests for, and install the repo at the given URL
     '''
@@ -235,15 +234,10 @@ def install_repo(url, logger):
     print(f"Installing on repo_path: {repo_path}\n")
 
     # Check if repo has already been installed
-
-
     for directory in [LOCAL_EVAL_DIR, REPOS_DIR, R2E_BUCKET_DIR, EXTRACTED_DATA_DIR, TESTGEN_DIR]:
         if not directory.exists():
             directory.mkdir()
             print(f"Newly created directory: {directory}\n")
-
-
-
 
     #cloned_repo_exists = os.path.exists(REPOS_DIR / repo_id)
     #extracted_tests_exist = os.path.exists(EXTRACTED_DATA_DIR / f"{repo_id}_extracted.json")
@@ -252,9 +246,6 @@ def install_repo(url, logger):
     #setup_repo_already_done = cloned_repo_exists and extracted_tests_exist and testgen_exists
     # Important: cloned_repo_exists and extracted_tests_exist don't do anything right now. 
     # all that matters is whether the testgen file and docker image exist
-
-
-
 
     if not testgen_exists:
         setup_repo(url, repo_id, clear_existing_repos=True)
@@ -265,6 +256,10 @@ def install_repo(url, logger):
         setup_container(image_name, repo_id)
     else:
         logger.info("Skipping dockerfile build")
+
+    # check if path `logs/{image_name}_install_logs` exists
+    if not os.path.exists(f"logs/{repo_id}_install.log"):
+        get_install_logs_from_image(image_name)
 
     simulator, conn = init_docker(repo_id, image_name, logger)
     #agentic_loop(image_name, repo_name, simulator, conn) # no agentic loop for now
@@ -279,6 +274,43 @@ def install_repo(url, logger):
         logger.error(f"FAILURE MODE: command = RUN ORACLE, output = {message}")
         #write_failure_mode(image_name, "(ran base installation)", output)
         return False
+
+
+def get_install_logs_from_image(image_name):
+    # Create a Docker client
+    client = docker.from_env()
+
+    try:
+        # Create a container from the image
+        container = client.containers.create(image_name)
+
+        # Define the source and destination paths
+        src_path = '/install_code/install_logs'
+        dst_path = os.path.join('logs', f'{image_name}_install_logs')
+
+        # Ensure the destination directory exists
+        os.makedirs(dst_path, exist_ok=True)
+
+        # Copy the contents from the container to the host
+        bits, stat = container.get_archive(src_path)
+
+        # Write the contents to the destination directory
+        with open(os.path.join(dst_path, 'install_logs.tar'), 'wb') as f:
+            for chunk in bits:
+                f.write(chunk)
+
+        # Extract the tar file
+        with tarfile.open(os.path.join(dst_path, 'install_logs.tar'), 'r') as tar:
+            tar.extractall(path=dst_path)
+
+        # Remove the temporary tar file
+        os.remove(os.path.join(dst_path, 'install_logs.tar'))
+
+    finally:
+        # Always remove the container, even if an exception occurs
+        container.remove()
+
+    print(f"Install logs copied from {image_name} to {dst_path}")
 
 def install_repo_from_url(url):
     repo_name = url.split("/")[-1]
@@ -329,18 +361,6 @@ if __name__ == "__main__":
     total_fails = 0
     total_succ = 0
     tot_len = len(urls)
-    '''
-    #Doesn't work due to conflicting logger variables (variables are not private between function calls?)
-    run_tasks_in_parallel(
-        install_repo_from_url,
-        urls,
-        num_workers=2,
-        timeout_per_task=None,
-        use_progress_bar=True,
-        progress_bar_desc="Installing repos..."
-    )
-    '''
+
     signal.signal(signal.SIGINT, signal_handler)
     parallel_execution(install_repo_from_url, urls, max_workers=2)
-
-    #print(f"Among {tot_len} repos, {total_fails} installations failed")
