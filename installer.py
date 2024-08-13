@@ -56,7 +56,7 @@ def setup_logger(path, repo_id):
 
     # Create stream handler
     stream_handler = logging.StreamHandler()
-    stream_handler.setLevel(logging.DEBUG)
+    stream_handler.setLevel(logging.INFO)
     stream_handler.setFormatter(formatter)
 
     # Add handlers to logger
@@ -67,14 +67,7 @@ def setup_logger(path, repo_id):
     logging.getLogger("docker.utils.config").setLevel(logging.WARNING)
     logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
 
-    # All four of these should show on stdout
-    logger.info("This is an info message")
-    logger.warning("This is a warning message")
-    logger.error("This is an error message")
-    logger.debug("This is a debug message")
-
     print("Successfully set up logger at path ", path)
-
     return logger
 
 def write_failure_mode(image_name, command, output):
@@ -131,31 +124,27 @@ def check_execution_status(execution_output_path):
 def installation_oracle(simulator, conn, repo_id, logger):
     # This function abstracts the verification command
 
-    print(f"TEST ID CHECK: {repo_id}_generate")
-
     exec_args = ExecutionArgs(
         testgen_exp_id=f"{repo_id}_generate",
         execution_multiprocess=0,  # Replace with your desired number of processes
         image_name="r2e:placeholder3"
     )
 
-    print(f"Running Oracle self-equivalence test...")
+    logger.info(f"Running Oracle self-equivalence test...")
     # Run the self_equiv function
     run_self_equiv(exec_args, simulator, conn, logger)
-    print("Done running self-equivalence test")
+    logger.info("Done running self-equivalence test")
 
     # This file contains the output of the execution
     #command = f"python r2e/execution/run_self_equiv.py --testgen_exp_id temp_generate --image_name {image_name} --execution_multiprocess 0"
     try:
-        print(f"Checking execution status...")
-
+        logger.info(f"Checking execution status...")
         success, message = check_execution_status(str(TESTGEN_DIR) + f"/{repo_id}_generate_out.json")
-        print(success, message)
         return success, message
 
     except Exception as e:
-        print(f"\nOracle result: ERROR; Exception: {e}")
-        return f"ERROR: {e}"
+        logger.info(f"\nOracle result: ERROR; Exception: {e}")
+        return 0, f"ERROR: {e}"
 
 def llm_suggest_next_command(context, last_command, last_output, oracle_result):
     msg_content = f"""
@@ -250,6 +239,7 @@ def install_repo(url, logger):
 
     if not testgen_exists:
         setup_repo(url, repo_id, clear_existing_repos=True)
+        logger.info("Testgen file not found. Running setup_repo...")
     else:
         logger.info("Skipping repository setup")
 
@@ -342,14 +332,7 @@ def signal_handler(sig, frame):
 
     # Exit the main process
     sys.exit(0)
-
-def parallel_execution(function, args, max_workers=None):
-    try:
-        with ProcessPoolExecutor(max_workers=max_workers) as executor:
-            executor.map(function, args)
-    except Exception as e:
-        print(f"Error: {e}")
-
+    
 if __name__ == "__main__":
     # Open up urls.json and read the results as a list
     with open("nomodule_urls.json", "r") as f:
@@ -370,7 +353,7 @@ if __name__ == "__main__":
     outputs = run_tasks_in_parallel(
         install_repo_from_url,
         urls,
-        num_workers=2,
+        num_workers=10,
         timeout_per_task=None,
         use_progress_bar=True,
         progress_bar_desc="Installing repos..."
