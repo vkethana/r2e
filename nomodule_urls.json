@@ -1,6 +1,10 @@
 [   
-    "https://github.com/pytorch/pytorch",
-    "https://github.com/tensorflow/models",
-    "https://github.com/yt-dlp/yt-dlp",
-    "https://github.com/home-assistant/core"
+    "https://github.com/quantumblacklabs/kedro",
+    "https://github.com/rougier/numpy-100",
+    "https://github.com/thealgorithms/python",
+    "https://github.com/tiangolo/fastapi",
+    "https://github.com/psf/requests",
+    "https://github.com/microsoft/playwright-python",
+    "https://github.com/psf/black",
+    "https://github.com/mwaskom/seaborn"
 ]
