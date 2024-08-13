@@ -59,36 +59,23 @@ def make_equiv_test(repo_id):
     command = f"python r2e/generators/testgen/generate.py -i {repo_id}_extracted.json --multiprocess 16 --exp_id {repo_id}"
     os.system(command)
 
-def setup_repo(url,repo_id,clear_existing_repos=False):
-    if clear_existing_repos:
-        print("Clearing existing repos...")
-        #clear_repos_folder()
-    else:
-        print("Skipping clearing existing repos...")
-
-    print("Cloning new repo...")
+def setup_repo(url,repo_id, logger):
+    logger.debug("Cloning new repo...")
     clone_repos(url)
-    print("Extracting tests...")
+    logger.debug("Extracting tests...")
     extract_data(repo_id)
-    print("Reducing number of tests...")
-    reduce_data(repo_id)
-    print("Generating equivalence tests...")
+    #logger.debug("Reducing number of tests...")
+    #reduce_data(repo_id)
+    logger.debug("Generating equivalence tests...")
     make_equiv_test(repo_id)
 
-def setup_test_container(image_name="r2e:interactive_partial_install"):
-    clone_repos("https://github.com/psf/requests")
-    print("IMPORTANT: MAKE SURE YOUR R2E INSTALL IS LOCATED AT ~/r2e")
-    #ans = input("Have you configured your R2E install to be located at /home/<username>/r2e? (y/n)")
-
-    dockerfile_path = R2E_REPO + " r2e/repo_builder/docker_builder/base_dockerfile.dockerfile. "
-    os.system(f"cd ~/buckets/local_repoeval_bucket/repos && docker build -t {image_name} -f {dockerfile_path} .")
-
-def setup_container(image_name, repo_id):
+def setup_container(image_name, repo_id, logger):
+    logger.debug("Building dockerfile...")
     os.system(f"cd {R2E_REPO} && python r2e/repo_builder/docker_builder/r2e_dockerfile_builder.py --install_batch_size 1 --repo_id {repo_id}")
     #os.system(f"cd ~/buckets/local_repoeval_bucket/repos && pip install pipreqs")
     #os.system(f"cd ~/buckets/local_repoeval_bucket/repos && pipreqs . --force")
+    logger.debug("Building docker image...")
     os.system(f"cd ~/buckets/local_repoeval_bucket/repos && docker build -t {image_name} -f {R2E_REPO}/r2e/repo_builder/docker_builder/r2e_final_dockerfile.dockerfile .")
-
 
 if __name__ == "__main__":
     # Assume repo has already been cloned

@@ -240,18 +240,19 @@ def install_repo(url, logger):
     # all that matters is whether the testgen file and docker image exist
 
     if not testgen_exists:
-        setup_repo(url, repo_id, clear_existing_repos=True)
+        setup_repo(url, repo_id, logger)
         logger.info("Testgen file not found. Running setup_repo...")
     else:
         logger.info("Skipping repository setup")
 
     if not docker_image_exists:
-        setup_container(image_name, repo_id)
+        setup_container(image_name, repo_id, logger)
     else:
         logger.info("Skipping dockerfile build")
 
     # check if path `logs/{image_name}_install_logs` exists
     if not os.path.exists(f"logs/{repo_id}_install.log"):
+        logger.info("Transferring docker logs to host machine...")
         get_install_logs_from_image(image_name)
 
     simulator, conn = init_docker(repo_id, image_name, logger)
