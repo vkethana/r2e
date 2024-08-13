@@ -15,9 +15,8 @@ from r2e.utils.data import load_functions_under_test, write_functions_under_test
 from r2e.models import Tests
 from r2e.models import Function
 
-'''
-def get_service(repo_id: str, port: int, image_name: str, container) -> tuple[DockerSimulator, rpyc.Connection]:
-    simulator = DockerSimulator(repo_id=repo_id, port=port, image_name=image_name)
+def get_service(repo_id: str, port: int, image_name: str, logger: any) -> tuple[DockerSimulator, rpyc.Connection]:
+    simulator = DockerSimulator(repo_id=repo_id, port=port, image_name=image_name, logger=logger)
     try:
         conn = rpyc.connect(
             "localhost", port, keepalive=True, config={"sync_request_timeout": 180}
@@ -27,20 +26,10 @@ def get_service(repo_id: str, port: int, image_name: str, container) -> tuple[Do
         simulator.stop_container()
         raise e
     return simulator, conn
-'''
 
 
 def run_fut_with_port(
-    fut: FunctionUnderTest | MethodUnderTest, simulator, conn
-) -> tuple[bool, str, FunctionUnderTest | MethodUnderTest]:
-    '''
-    try:
-        simulator, conn = get_service(fut.repo_id, port, image_name, container)
-    except Exception as e:
-        print("Service error@", fut.repo_id, repr(e))
-        fut.test_history.update_exec_stats({"error": repr(e)})
-        return False, repr(e), fut
-    '''
+    fut: FunctionUnderTest | MethodUnderTest, simulator, conn) -> tuple[bool, str, FunctionUnderTest | MethodUnderTest]:
     try:
         return self_equiv_futs([fut], conn)
     except Exception as e:
@@ -49,30 +38,49 @@ def run_fut_with_port(
     finally:
         #simulator.stop_container()
         #conn.close()
-        # don't stop the simulator or close the connection, bc we want to reuse them across tests
         pass
 
     fut.test_history.update_exec_stats({"error": tb})
     #print(f"Error@{fut.repo_id}:\n{tb}")
     return False, tb, fut
 
-def run_fut_mp(args: tuple) -> tuple[bool, str, FunctionUnderTest | MethodUnderTest]:
-    '''
-    Wrapper function for running FUTs in parallel
-    Accepts arguments as a tuple, unpacks them, and returns the output of the FUT
-    '''
+def run_fut_mp(args: tuple[FunctionUnderTest | MethodUnderTest, str, any]) -> tuple[bool, str, FunctionUnderTest | MethodUnderTest]:
     fut = args[0]
-    simulator = args[1]
-    conn = args[2]
+    image_name = args[1]
+    logger = args[2]
+    logger.debug(f"Currently executing FUT: {fut}")
 
-    output = run_fut_with_port(fut, simulator, conn)
+    port = random.randint(3000, 10000)
+
+    try:
+        simulator, conn = get_service(fut.repo_id, port, image_name, logger)
+    except Exception as e:
+        print("Service error@", fut.repo_id, repr(e))
+        fut.test_history.update_exec_stats({"error": repr(e)})
+        return False, repr(e), fut
+
+    try:
+        logger.debug(f"Currently executing FUT: {fut}")
+        output = run_fut_with_port(fut, simulator, conn)
+    except Exception as e:
+        logger.error(f"Error running FUT at {fut.repo_id}:{repr(e)}")
+        tb = traceback.format_exc()
+    if (output[0]):
+        logger.info(f"Test passed successfully!")
+    else:
+        logger.error(f"Test failed!")
+        logger.error(f"Output of failed test: {output[1]}")
+
+    simulator.stop_container()
+    conn.close()
     return output
 
 def run_self_equiv(exec_args, simulator, conn, logger):
     logger.info(f"Running FUTs from {exec_args.testgen_exp_id}.json")
+    print("simulator: ", simulator)
     assert (simulator != None)
     futs = load_functions_under_test(TESTGEN_DIR / f"{exec_args.testgen_exp_id}.json")
-    logger.info(f"There are {len(futs)} FUTs to run across {exec_args.execution_multiprocess} workers.")
+    logger.info(f"There are {len(futs)} FUTs to run.")
     #futs = Tests(tests={})
     '''
     for fut in futs:
@@ -93,8 +101,9 @@ def run_self_equiv(exec_args, simulator, conn, logger):
         i = 0
         for fut in futs:
             i += 1
+            #port = exec_args.port
             try:
-                #output = run_fut_with_port(fut, port, exec_args.image_name)
+                #output = run_fut_with_port(fut, exec_args.image_name)
                 logger.debug(f"Currently executing FUT: {fut}")
                 output = run_fut_with_port(fut, simulator, conn)
             except Exception as e:
@@ -113,16 +122,19 @@ def run_self_equiv(exec_args, simulator, conn, logger):
     else:
         outputs = run_tasks_in_parallel_iter(
             run_fut_mp,
-            [(i, simulator, None) for i in futs],
+            [(i, image_name, logger) for i in futs],
             num_workers=exec_args.execution_multiprocess,
             timeout_per_task=exec_args.timeout_per_task,
             use_progress_bar=True,
         )
+        i = 0
         for x in outputs:
             if x.is_success():
+                logger.info(f"Test {i} passed successfully!")
                 new_futs.append(x.result[2])  # type: ignore
             else:
-                print(f"Error: {x.exception_tb}")
+                logger.error(f"Test {i} failed! Traceback: {x.exception_tb}")
+            i += 1
 
     logger.info(f"Number of failed tests: {num_fails}")
     write_functions_under_test(

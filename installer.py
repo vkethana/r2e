@@ -125,11 +125,10 @@ def check_execution_status(execution_output_path):
 
 def installation_oracle(simulator, conn, repo_id, logger):
     # This function abstracts the verification command
-
     exec_args = ExecutionArgs(
         testgen_exp_id=f"{repo_id}_generate",
         execution_multiprocess=0,  # Replace with your desired number of processes
-        image_name="r2e:placeholder3"
+        image_name=f"r2e:temp_{repo_id.split('___')[-1]}",
     )
 
     logger.info(f"Running Oracle self-equivalence test...")
@@ -251,7 +250,7 @@ def install_repo(url, logger):
         logger.info("Skipping dockerfile build")
 
     # check if path `logs/{image_name}_install_logs` exists
-    if not os.path.exists(f"logs/{repo_id}_install.log"):
+    if not os.path.exists(f"logs/{repo_id}_install_logs"):
         logger.info("Transferring docker logs to host machine...")
         get_install_logs_from_image(image_name)
 
