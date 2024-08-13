@@ -86,6 +86,7 @@ def run_self_equiv(exec_args, simulator, conn, logger):
     new_futs = []
     image_name = exec_args.image_name
     #image_name = "r2e:jul12"
+    num_fails = 0
     if exec_args.execution_multiprocess == 0:
         i = 0
         for fut in futs:
@@ -93,7 +94,7 @@ def run_self_equiv(exec_args, simulator, conn, logger):
             port = exec_args.port
             try:
                 #output = run_fut_with_port(fut, port, exec_args.image_name)
-                logger.debug("Currently executing FUT:", fut)
+                logger.debug(f"Currently executing FUT: {fut}")
                 output = run_fut_with_port(fut, port, simulator, conn)
             except Exception as e:
                 logger.error(f"Error running FUT at {fut.repo_id}:{repr(e)}")
@@ -101,8 +102,9 @@ def run_self_equiv(exec_args, simulator, conn, logger):
             if (output[0]):
                 logger.info(f"Test {i} passed successfully!")
             else:
-                logger.info(f"ERROR: Test {i} failed!")
-                logger.info(f"Output of failed test: {output[1]}")
+                logger.error(f"Test {i} failed!")
+                logger.error(f"Output of failed test: {output[1]}")
+                num_fails += 1
                 #print("Result of failed test:", output[1])
             #print("Result of FUT, 2: ", output[2]) #output[2] is the raw FUT object, 
             # which in most cases you dont need to actually see
@@ -121,6 +123,8 @@ def run_self_equiv(exec_args, simulator, conn, logger):
                 new_futs.append(x.result[2])  # type: ignore
             else:
                 print(f"Error: {x.exception_tb}")
+
+    logger.info(f"Number of failed tests: {num_fails}")
     write_functions_under_test(
         new_futs, TESTGEN_DIR / f"{exec_args.testgen_exp_id}_out.json"
     )

@@ -2,7 +2,6 @@ import docker
 import traceback
 
 import os
-import multiprocessing as mp
 import threading
 import queue
 import shlex
@@ -96,6 +95,9 @@ def check_execution_status(execution_output_path):
     # Read the JSON output file
     with open(execution_output_path, "r") as f:
         output = json.load(f)
+
+    if output == []:
+        return False, "No output found in the JSON file. Does repo contain no Python code?"
 
     # Initialize a flag to track if we've seen any successful executions
     any_success = False
@@ -314,6 +316,8 @@ def install_repo_from_url(url):
 
     result = install_repo(url, logger)
     logger.info(f"Repo installation finished. Result: {result}")
+    if not result:
+        raise Exception(f"Installation failed for {url}")
     '''
     if result: # succeess
         total_succ += 1
@@ -334,32 +338,47 @@ def signal_handler(sig, frame):
     sys.exit(0)
     
 if __name__ == "__main__":
-    # Open up urls.json and read the results as a list
-    with open("nomodule_urls.json", "r") as f:
-        urls = json.load(f)
+    try:
+        # Open up urls.json and read the results as a list
+        with open("nomodule_urls.json", "r") as f:
+            urls = json.load(f)
 
-    print(f"Attempting to install {len(urls)} repos")
+        print(f"Attempting to install {len(urls)} repos")
 
-    # TODO: Get total_fails, total_succ to work with multiprocessing
-    # Might need to use locks? shared variables? 
+        # TODO: Get total_fails, total_succ to work with multiprocessing
+        # Might need to use locks? shared variables? 
 
-    total_fails = 0
-    total_succ = 0
-    tot_len = len(urls)
+        total_fails = 0
+        total_succ = 0
+        tot_len = len(urls)
 
-    #signal.signal(signal.SIGINT, signal_handler)
-    #parallel_execution(install_repo_from_url, urls, max_workers=2)
+        #signal.signal(signal.SIGINT, signal_handler)
+        #parallel_execution(install_repo_from_url, urls, max_workers=2)
 
-    outputs = run_tasks_in_parallel(
-        install_repo_from_url,
-        urls,
-        num_workers=10,
-        timeout_per_task=None,
-        use_progress_bar=True,
-        progress_bar_desc="Installing repos..."
-    )
-    for x in outputs:
-        if x.is_success():
-            print(f"Success: {x}")
-        else:
-            print(f"Error: {x.exception_tb}")
+        outputs = run_tasks_in_parallel(
+            install_repo_from_url,
+            urls,
+            num_workers=10,
+            timeout_per_task=None,
+            use_progress_bar=True,
+            progress_bar_desc="Installing repos..."
+        )
+        print("*" * 50)
+        print("Repo installations finished")
+        print("Detailed breakdown of failures:")
+        for x in outputs:
+            if not x.is_success():
+                print(f"Error: {x.exception_tb}")
+
+        print("Quick breakdown (for more detailed info scroll up):")
+
+        for i in range(len(urls)):
+            url = urls[i]
+            x = outputs[i]
+            if x.is_success():
+                print(f"URL {url} was a success")
+            else:
+                print(f"URL {url} was a failure, or was thrown out due to bad data")
+
+    except Exception as e:
+        print(f"Error: {e}")
