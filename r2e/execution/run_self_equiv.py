@@ -44,11 +44,13 @@ def run_fut_with_port(
     #print(f"Error@{fut.repo_id}:\n{tb}")
     return False, tb, fut
 
-def run_fut_mp(args: tuple[FunctionUnderTest | MethodUnderTest, str, any]) -> tuple[bool, str, FunctionUnderTest | MethodUnderTest]:
+def run_fut_mp(args: tuple[FunctionUnderTest | MethodUnderTest, str, any, int]) -> tuple[bool, str, FunctionUnderTest | MethodUnderTest]:
     fut = args[0]
     image_name = args[1]
     logger = args[2]
+    i = args[3]
     logger.debug(f"Currently executing FUT: {fut}")
+    logger.info(f"Currently executing the {i}th FUT")
 
     port = random.randint(3000, 10000)
 
@@ -60,20 +62,18 @@ def run_fut_mp(args: tuple[FunctionUnderTest | MethodUnderTest, str, any]) -> tu
         return False, repr(e), fut
 
     try:
-        logger.debug(f"Currently executing FUT: {fut}")
         output = run_fut_with_port(fut, simulator, conn)
     except Exception as e:
-        logger.error(f"Error running FUT at {fut.repo_id}:{repr(e)}")
+        logger.error(f"Error running the {i}th FUT at {fut.repo_id}:{repr(e)}")
         tb = traceback.format_exc()
 
     simulator.stop_container()
     conn.close()
 
     if (output[0]):
-        logger.info(f"Test passed successfully!")
+        logger.info(f"{i}th FUT passed successfully!")
     else:
-        logger.error(f"Test failed!")
-        logger.error(f"Output of failed test: {output[1]}")
+        logger.error(f"{i}th FUT failed with output {output[1]}")
         raise(Exception("Test failed"))
 
     return output
@@ -126,12 +126,13 @@ def run_self_equiv(exec_args, simulator, conn, logger):
     else:
         outputs = run_tasks_in_parallel_iter(
             run_fut_mp,
-            [(i, image_name, logger) for i in futs],
+            [(futs[i], image_name, logger, i) for i in range(len(futs))],
             num_workers=exec_args.execution_multiprocess,
             timeout_per_task=exec_args.timeout_per_task,
             use_progress_bar=True,
         )
         i = 0
+        logger.info(f"Printing out breakdown of results:")
         for x in outputs:
             if x.is_success():
                 logger.info(f"Test {i} of {len(futs)} passed successfully!")
@@ -142,7 +143,8 @@ def run_self_equiv(exec_args, simulator, conn, logger):
                 logger.info(f"Total number of fails so far: {num_fails}")
             i += 1
 
-    logger.info(f"Number of failed tests: {num_fails} out of {len(futs)} tests, pass rate is {round((len(futs) - num_fails)/len(futs), 2)}")
+    if len(futs) > 0:
+        logger.info(f"Number of failed tests: {num_fails} out of {len(futs)} tests, pass rate is {round((len(futs) - num_fails)/len(futs), 2)}")
     write_functions_under_test(
         new_futs, TESTGEN_DIR / f"{exec_args.testgen_exp_id}_out.json"
     )

@@ -47,7 +47,7 @@ def reduce_data(repo_id):
 
     # Write the trimmed data back to the file
     with open(extracted_file_path, 'w') as f:
-        json.dump(data[0:100], f, indent=4)
+        json.dump(data[0:500], f, indent=4)
 
 def make_equiv_test(repo_id):
     # Generate the equivalence tests

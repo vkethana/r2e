@@ -31,7 +31,7 @@ from r2e.paths import R2E_BUCKET_DIR, TESTGEN_DIR, REPOS_DIR, EXTRACTED_DATA_DIR
 
 openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 client = docker.from_env()
-logger_dir = "15_repo_logs_2"
+logger_dir = "750_repos_pt1"
 
 def setup_logger(path, repo_id):
     # Check the logs directory and make it if it doesn't exist
@@ -128,21 +128,21 @@ def installation_oracle(simulator, conn, repo_id, logger):
     # This function abstracts the verification command
     exec_args = ExecutionArgs(
         testgen_exp_id=f"{repo_id}_generate",
-        execution_multiprocess=0,  # Replace with your desired number of processes
+        execution_multiprocess=32,  # Replace with your desired number of processes
         image_name=f"r2e:temp_{repo_id.split('___')[-1]}",
     )
 
-    logger.info(f"Running Oracle self-equivalence test...")
+    logger.debug(f"Running Oracle self-equivalence test...")
     # Run the self_equiv function
     run_self_equiv(exec_args, simulator, conn, logger)
-    logger.info("Done running self-equivalence test")
+    logger.debug("Done running self-equivalence test")
 
     # This file contains the output of the execution
     #command = f"python r2e/execution/run_self_equiv.py --testgen_exp_id temp_generate --image_name {image_name} --execution_multiprocess 0"
     try:
-        logger.info(f"Checking execution status...")
+        logger.debug(f"Checking execution status...")
         success, message = check_execution_status(str(TESTGEN_DIR) + f"/{repo_id}_generate_out.json")
-        if message == 'Repo has no Python files to test':
+        if message == "Repo has no Python files to test":
             logger.error("BLANK REPO ERROR: Repo should be discarded. It has no Python files to test")
         return success, message
 
@@ -190,15 +190,15 @@ def get_service(repo_id: str, port: int, image_name: str, logger: None) -> tuple
     try:
         simulator = DockerSimulator(repo_id=repo_id, port=port, image_name=image_name, logger=logger)
     except Exception as e:
-        logger.info(f"Simulator start error -- {repo_id} -- {repr(e)}")
+        logger.error(f"Simulator start error -- {repo_id} -- {repr(e)}")
         raise e
-    logger.info(f"Starting container for {repo_id}...")
+    logger.debug(f"Starting container for {repo_id}...")
     try:
         conn = rpyc.connect(
             "localhost", port, keepalive=True, config={"sync_request_timeout": 180}
         )
     except Exception as e:
-        logger.info(f"Connection error -- {repo_id} -- {repr(e)}")
+        logger.error(f"Connection error -- {repo_id} -- {repr(e)}")
         simulator.stop_container()
         raise e
     return simulator, conn
@@ -211,7 +211,7 @@ def init_docker(repo_name, image_name, logger):
         simulator, conn = get_service(repo_name, port, image_name, logger)
         return simulator, conn
     except Exception as e:
-        logger.info(f"Service error -- {repo_name} -- {repr(e)}")
+        logger.error(f"Service error -- {repo_name} -- {repr(e)}")
         raise e
 
 def install_repo(url, logger):
@@ -285,7 +285,7 @@ def install_repo(url, logger):
         # Always stop the container
         print("Closing connection and stopping container")
         simulator.stop_container()
-        logger.info(f"Stopped container for {repo_id}")
+        logger.debug(f"Stopped container for {repo_id}")
         conn.close()
         print("Done with connection and container close")
 
@@ -378,8 +378,8 @@ if __name__ == "__main__":
         outputs = run_tasks_in_parallel(
             install_repo_from_url,
             urls,
-            num_workers=4,
-            timeout_per_task=None,
+            num_workers=48,
+            timeout_per_task=3000,
             use_progress_bar=True,
             progress_bar_desc="Installing repos..."
         )
