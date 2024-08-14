@@ -31,7 +31,7 @@ from r2e.paths import R2E_BUCKET_DIR, TESTGEN_DIR, REPOS_DIR, EXTRACTED_DATA_DIR
 
 openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 client = docker.from_env()
-logger_dir = "15_repo_logs_2"
+logger_dir = "first_half"
 
 def setup_logger(path, repo_id):
     # Check the logs directory and make it if it doesn't exist
@@ -378,7 +378,7 @@ if __name__ == "__main__":
         outputs = run_tasks_in_parallel(
             install_repo_from_url,
             urls,
-            num_workers=4,
+            num_workers=10,
             timeout_per_task=None,
             use_progress_bar=True,
             progress_bar_desc="Installing repos..."
