@@ -39,20 +39,16 @@ def reduce_data(repo_id):
     # Trim down the extracted data
     # Open up the extracted file (~/buckets/r2e_bucket/extracted_data/{repo_id}_extracted.json)
     # It consists of a list of JSON objects. Possibly hundreds. Trim it down to just num_funcs (let num_funcs=5). Select the num_funcs tests at random
-    num_funcs = 5
+    num_funcs = 100
     extracted_file_path = os.path.expanduser(f"~/buckets/r2e_bucket/extracted_data/{repo_id}_extracted.json")
 
     # Read the extracted data
     with open(extracted_file_path, 'r') as f:
         data = json.load(f)
 
-    # Select num_funcs items at random
-    if len(data) > num_funcs:
-        data = random.sample(data, num_funcs)
-
     # Write the trimmed data back to the file
     with open(extracted_file_path, 'w') as f:
-        json.dump(data, f, indent=4)
+        json.dump(data[0:100], f, indent=4)
 
 def make_equiv_test(repo_id):
     # Generate the equivalence tests
@@ -64,8 +60,8 @@ def setup_repo(url,repo_id, logger):
     clone_repos(url)
     logger.debug("Extracting tests...")
     extract_data(repo_id)
-    #logger.debug("Reducing number of tests...")
-    #reduce_data(repo_id)
+    logger.debug("Reducing number of tests...")
+    reduce_data(repo_id)
     logger.debug("Generating equivalence tests...")
     make_equiv_test(repo_id)
 

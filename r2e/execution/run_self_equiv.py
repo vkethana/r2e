@@ -65,14 +65,17 @@ def run_fut_mp(args: tuple[FunctionUnderTest | MethodUnderTest, str, any]) -> tu
     except Exception as e:
         logger.error(f"Error running FUT at {fut.repo_id}:{repr(e)}")
         tb = traceback.format_exc()
+
+    simulator.stop_container()
+    conn.close()
+
     if (output[0]):
         logger.info(f"Test passed successfully!")
     else:
         logger.error(f"Test failed!")
         logger.error(f"Output of failed test: {output[1]}")
+        raise(Exception("Test failed"))
 
-    simulator.stop_container()
-    conn.close()
     return output
 
 def run_self_equiv(exec_args, simulator, conn, logger):

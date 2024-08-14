@@ -31,11 +31,12 @@ from r2e.paths import R2E_BUCKET_DIR, TESTGEN_DIR, REPOS_DIR, EXTRACTED_DATA_DIR
 
 openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 client = docker.from_env()
+logger_dir = "1500_repo_logs"
 
 def setup_logger(path, repo_id):
     # Check the logs directory and make it if it doesn't exist
-    if not os.path.exists("logs"):
-        os.makedirs("logs")
+    if not os.path.exists(logger_dir):
+        os.makedirs(logger_dir)
 
     # Create a logger object
     logger = logging.getLogger(f"logger_{repo_id}")
@@ -250,24 +251,35 @@ def install_repo(url, logger):
         logger.info("Skipping dockerfile build")
 
     # check if path `logs/{image_name}_install_logs` exists
-    if not os.path.exists(f"logs/{repo_id}_install_logs"):
+    if not os.path.exists(f"{logger_dir}/{repo_id}_install_logs"):
         logger.info("Transferring docker logs to host machine...")
         get_install_logs_from_image(image_name)
 
-    simulator, conn = init_docker(repo_id, image_name, logger)
-    #agentic_loop(image_name, repo_name, simulator, conn) # no agentic loop for now
-    oracle_result, message = installation_oracle(simulator, conn, repo_id, logger)
-    if oracle_result:
-        # Print out successful repo
-        logger.info(f"INSTALLATION SUCCEEDED: {repo_id}")
-        return True
-    else:
-        # Print out failed repo
-        logger.info(f"INSTALLATION FAILURE: {repo_id}")
-        logger.error(f"FAILURE MODE: command = RUN ORACLE, output = {message}")
-        #write_failure_mode(image_name, "(ran base installation)", output)
+    try:
+        simulator, conn = init_docker(repo_id, image_name, logger)
+        #agentic_loop(image_name, repo_name, simulator, conn) # no agentic loop for now
+        oracle_result, message = installation_oracle(simulator, conn, repo_id, logger)
+        if oracle_result:
+            # Print out successful repo
+            logger.info(f"INSTALLATION SUCCEEDED: {repo_id}")
+            return True
+        else:
+            # Print out failed repo
+            logger.info(f"INSTALLATION FAILURE: {repo_id}")
+            logger.error(f"FAILURE MODE: command = RUN ORACLE, output = {message}")
+            #write_failure_mode(image_name, "(ran base installation)", output)
+            return False
+    except Exception as e:
+        logger.error(f"Error installing repo: {repo_id}")
+        logger.error(f"Exception: {e}")
         return False
-
+    finally:
+        # Always stop the container
+        print("Closing connection and stopping container")
+        simulator.stop_container()
+        logger.info(f"Stopped container for {repo_id}")
+        conn.close()
+        print("Done with connection and container close")
 
 def get_install_logs_from_image(image_name):
     # Create a Docker client
@@ -279,7 +291,7 @@ def get_install_logs_from_image(image_name):
 
         # Define the source and destination paths
         src_path = '/install_code/install_logs'
-        dst_path = os.path.join('logs', f'{image_name}_install_logs')
+        dst_path = os.path.join(logger_dir, f'{image_name}_install_logs')
 
         # Ensure the destination directory exists
         os.makedirs(dst_path, exist_ok=True)
@@ -311,7 +323,7 @@ def install_repo_from_url(url):
     repo_id = repo_author + "___" + repo_name
     image_name = "r2e:temp_" + repo_name
 
-    logger = setup_logger(f"logs/{repo_id}_install.log", repo_id)
+    logger = setup_logger(f"{logger_dir}/{repo_id}_install.log", repo_id)
     logger.info(f"Attempting to install: {url}\n")
 
     result = install_repo(url, logger)
@@ -358,7 +370,7 @@ if __name__ == "__main__":
         outputs = run_tasks_in_parallel(
             install_repo_from_url,
             urls,
-            num_workers=10,
+            num_workers=4,
             timeout_per_task=None,
             use_progress_bar=True,
             progress_bar_desc="Installing repos..."
