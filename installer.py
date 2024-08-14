@@ -42,6 +42,7 @@ def setup_logger(path, repo_id):
     logger = logging.getLogger(f"logger_{repo_id}")
     logger.setLevel(logging.DEBUG)
 
+
     # Ensure the local time is used
     formatter = logging.Formatter(
         fmt=f'%(asctime)s %(name)s %(levelname)s %(message)s (%(filename)s:%(lineno)d) ({repo_id})',
