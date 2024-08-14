@@ -113,11 +113,12 @@ def run_self_equiv(exec_args, simulator, conn, logger):
                 logger.error(f"Error running FUT at {fut.repo_id}:{repr(e)}")
                 tb = traceback.format_exc()
             if (output[0]):
-                logger.info(f"Test {i} passed successfully!")
+                logger.info(f"Test {i} of {len(futs)} passed successfully!")
             else:
-                logger.error(f"Test {i} failed!")
+                logger.error(f"Test {i} of {len(futs)} failed!")
                 logger.error(f"Output of failed test: {output[1]}")
                 num_fails += 1
+                logger.info(f"Total number of fails so far: {num_fails}")
                 #print("Result of failed test:", output[1])
             #print("Result of FUT, 2: ", output[2]) #output[2] is the raw FUT object, 
             # which in most cases you dont need to actually see
@@ -133,10 +134,12 @@ def run_self_equiv(exec_args, simulator, conn, logger):
         i = 0
         for x in outputs:
             if x.is_success():
-                logger.info(f"Test {i} passed successfully!")
+                logger.info(f"Test {i} of {len(futs)} passed successfully!")
                 new_futs.append(x.result[2])  # type: ignore
             else:
-                logger.error(f"Test {i} failed! Traceback: {x.exception_tb}")
+                logger.error(f"Test {i} of {len(futs)} failed! Traceback: {x.exception_tb}")
+                num_fails += 1
+                logger.info(f"Total number of fails so far: {num_fails}")
             i += 1
 
     logger.info(f"Number of failed tests: {num_fails} out of {len(futs)} tests, pass rate is {round((len(futs) - num_fails)/len(futs), 2)}")

@@ -39,7 +39,6 @@ def reduce_data(repo_id):
     # Trim down the extracted data
     # Open up the extracted file (~/buckets/r2e_bucket/extracted_data/{repo_id}_extracted.json)
     # It consists of a list of JSON objects. Possibly hundreds. Trim it down to just num_funcs (let num_funcs=5). Select the num_funcs tests at random
-    num_funcs = 100
     extracted_file_path = os.path.expanduser(f"~/buckets/r2e_bucket/extracted_data/{repo_id}_extracted.json")
 
     # Read the extracted data

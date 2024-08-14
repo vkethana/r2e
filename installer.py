@@ -31,7 +31,7 @@ from r2e.paths import R2E_BUCKET_DIR, TESTGEN_DIR, REPOS_DIR, EXTRACTED_DATA_DIR
 
 openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 client = docker.from_env()
-logger_dir = "1500_repo_logs"
+logger_dir = "15_repo_logs_2"
 
 def setup_logger(path, repo_id):
     # Check the logs directory and make it if it doesn't exist
@@ -41,7 +41,6 @@ def setup_logger(path, repo_id):
     # Create a logger object
     logger = logging.getLogger(f"logger_{repo_id}")
     logger.setLevel(logging.DEBUG)
-
 
     # Ensure the local time is used
     formatter = logging.Formatter(
@@ -99,7 +98,7 @@ def check_execution_status(execution_output_path):
         output = json.load(f)
 
     if output == []:
-        return False, "No output found in the JSON file. Does repo contain no Python code?"
+        return False, "Repo has no Python files to test"
 
     # Initialize a flag to track if we've seen any successful executions
     any_success = False
@@ -143,6 +142,8 @@ def installation_oracle(simulator, conn, repo_id, logger):
     try:
         logger.info(f"Checking execution status...")
         success, message = check_execution_status(str(TESTGEN_DIR) + f"/{repo_id}_generate_out.json")
+        if message == 'Repo has no Python files to test':
+            logger.error("BLANK REPO ERROR: Repo should be discarded. It has no Python files to test")
         return success, message
 
     except Exception as e:
@@ -240,11 +241,17 @@ def install_repo(url, logger):
     # Important: cloned_repo_exists and extracted_tests_exist don't do anything right now. 
     # all that matters is whether the testgen file and docker image exist
 
+    '''
     if not testgen_exists:
         setup_repo(url, repo_id, logger)
         logger.info("Testgen file not found. Running setup_repo...")
     else:
         logger.info("Skipping repository setup")
+    '''
+
+    # for now, always run repo setup even if its already been done before
+    # this is due to ongoing changes in the setup_repo method
+    setup_repo(url, repo_id, logger)
 
     if not docker_image_exists:
         setup_container(image_name, repo_id, logger)
