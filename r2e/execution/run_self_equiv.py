@@ -136,7 +136,7 @@ def run_self_equiv(exec_args, simulator, conn, logger):
                 logger.error(f"Test {i} failed! Traceback: {x.exception_tb}")
             i += 1
 
-    logger.info(f"Number of failed tests: {num_fails}")
+    logger.info(f"Number of failed tests: {num_fails} out of {len(futs)} tests, pass rate is {round((len(futs) - num_fails)/len(futs), 2)}")
     write_functions_under_test(
         new_futs, TESTGEN_DIR / f"{exec_args.testgen_exp_id}_out.json"
     )
