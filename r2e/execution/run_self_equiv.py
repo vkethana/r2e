@@ -44,38 +44,31 @@ def run_fut_with_port(
     #print(f"Error@{fut.repo_id}:\n{tb}")
     return False, tb, fut
 
-def run_fut_mp(args: tuple[FunctionUnderTest | MethodUnderTest, str, any, int]) -> tuple[bool, str, FunctionUnderTest | MethodUnderTest]:
+def run_fut_mp(args: tuple[FunctionUnderTest | MethodUnderTest, str, int]) -> tuple[bool, str, FunctionUnderTest | MethodUnderTest]:
     fut = args[0]
     image_name = args[1]
     logger = args[2]
     i = args[3]
-    logger.debug(f"Currently executing FUT: {fut}")
-    logger.info(f"Currently executing the {i}th FUT")
 
     port = random.randint(3000, 10000)
 
     try:
         simulator, conn = get_service(fut.repo_id, port, image_name, logger)
     except Exception as e:
-        print("Service error@", fut.repo_id, repr(e))
         fut.test_history.update_exec_stats({"error": repr(e)})
         return False, repr(e), fut
 
     try:
         output = run_fut_with_port(fut, simulator, conn)
     except Exception as e:
-        logger.error(f"Error running the {i}th FUT at {fut.repo_id}:{repr(e)}")
         tb = traceback.format_exc()
-        #raise Exception(tb)
+        raise Exception(tb)
 
     simulator.stop_container()
     conn.close()
 
-    if (output[0]):
-        logger.info(f"{i}th FUT passed successfully!")
-    else:
+    if not (output[0]):
         error_msg = f"{i}th FUT failed with output {output[1]}"
-        logger.error(error_msg) #doesn't do anything
         raise(Exception(error_msg))
 
     return output
@@ -106,13 +99,10 @@ def run_self_equiv(exec_args, simulator, conn, logger):
         i = 0
         for fut in futs:
             i += 1
-            #port = exec_args.port
             try:
                 #output = run_fut_with_port(fut, exec_args.image_name)
                 logger.debug(f"Currently executing FUT: {fut}")
                 output = run_fut_with_port(fut, simulator, conn)
-                simulator.stop_container()
-                conn.close()
             except Exception as e:
                 logger.error(f"Error running FUT at {fut.repo_id}:{repr(e)}")
                 tb = traceback.format_exc()
