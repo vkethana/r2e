@@ -47,8 +47,7 @@ def run_fut_with_port(
 def run_fut_mp(args: tuple[FunctionUnderTest | MethodUnderTest, str, int]) -> tuple[bool, str, FunctionUnderTest | MethodUnderTest]:
     fut = args[0]
     image_name = args[1]
-    logger = args[2]
-    i = args[3]
+    i = args[2]
 
     port = random.randint(3000, 10000)
 
