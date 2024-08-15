@@ -15,6 +15,8 @@ from r2e.utils.data import load_functions_under_test, write_functions_under_test
 from r2e.models import Tests
 from r2e.models import Function
 
+import logging
+
 def get_service(repo_id: str, port: int, image_name: str, logger: any) -> tuple[DockerSimulator, rpyc.Connection]:
     simulator = DockerSimulator(repo_id=repo_id, port=port, image_name=image_name, logger=logger)
     try:
@@ -52,7 +54,11 @@ def run_fut_mp(args: tuple[FunctionUnderTest | MethodUnderTest, str, int]) -> tu
     port = random.randint(3000, 10000)
 
     try:
-        simulator, conn = get_service(fut.repo_id, port, image_name, logger)
+        # Create a dummy logger object
+        dummy_logger = logging.getLogger("dummy_logger")
+        dummy_logger.addHandler(logging.NullHandler())
+
+        simulator, conn = get_service(fut.repo_id, port, image_name, dummy_logger)
     except Exception as e:
         fut.test_history.update_exec_stats({"error": repr(e)})
         return False, repr(e), fut
