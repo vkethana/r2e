@@ -212,12 +212,6 @@ if __name__ == "__main__":
             use_progress_bar=True,
             progress_bar_desc="Installing repos..."
         )
-        print("*" * 50)
-        print("Repo installations finished")
-        print("Detailed breakdown of failures:")
-        for x in outputs:
-            if not x.is_success():
-                print(f"Error: {x.exception_tb}")
 
         print("*" * 50)
         print("Quick breakdown of installations (for more detailed info scroll up):")
