@@ -114,7 +114,7 @@ class DockerSimulator:
         try:
             self.container.stop()
             self.container.remove()
-        except Exception as erepo_id:
+        except Exception as e:
             self.logger.error(f"Container stop error {repr(e)}")
 
 
