@@ -36,7 +36,7 @@ def installation_oracle(simulator, conn, repo_id, logger):
     # This function abstracts the verification command
     exec_args = ExecutionArgs(
         testgen_exp_id=f"{repo_id}_generate",
-        execution_multiprocess=0,  # Replace with your desired number of processes
+        execution_multiprocess=5,  # Replace with your desired number of processes
         image_name=f"r2e:temp_{repo_id.split('___')[-1]}",
     )
 
@@ -214,6 +214,13 @@ if __name__ == "__main__":
         )
 
         print("*" * 50)
+        print("Repo installations finished")
+        print("Detailed breakdown of failures:")
+        for x in outputs:
+            if not x.is_success():
+                print(f"Error: {x.exception_tb}")
+
+        print("*" * 50)
         print("Quick breakdown of installations (for more detailed info scroll up):")
 
         for i in range(len(urls)):
@@ -221,8 +228,13 @@ if __name__ == "__main__":
             x = outputs[i]
             if x.is_success():
                 print(f"URL {url} was a success")
+                total_succ += 1
             else:
                 print(f"URL {url} was a failure, or was thrown out due to bad data")
+                total_fails += 1
+
+        print(f"Total successes: {total_succ}/{tot_len}")
+        print(f"Total failures: {total_fails}/{tot_len}")
 
     except Exception as e:
         print(f"Error: {e}")
