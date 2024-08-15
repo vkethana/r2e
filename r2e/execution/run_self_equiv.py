@@ -75,7 +75,7 @@ def run_fut_mp(args: tuple[FunctionUnderTest | MethodUnderTest, str, any, int]) 
         logger.info(f"{i}th FUT passed successfully!")
     else:
         error_msg = f"{i}th FUT failed with output {output[1]}"
-        logger.error(error_msg)
+        logger.error(error_msg) #doesn't do anything
         raise(Exception(error_msg))
 
     return output
