@@ -32,11 +32,14 @@ openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 client = docker.from_env()
 repo_list = "1300_repos_pt1.json"
 
+oracle_num_workers = 5
+installer_num_workers = 48
+
 def installation_oracle(simulator, conn, repo_id, logger):
     # This function abstracts the verification command
     exec_args = ExecutionArgs(
         testgen_exp_id=f"{repo_id}_generate",
-        execution_multiprocess=5,  # Replace with your desired number of processes
+        execution_multiprocess=oracle_num_workers,  # Replace with your desired number of processes
         image_name=f"r2e:temp_{repo_id.split('___')[-1]}",
     )
 
@@ -100,6 +103,7 @@ def install_repo(url):
     '''
     Clone, extract tests for, and install the repo at the given URL
     '''
+    logger_dir = "isolate"
     repo_name = url.split("/")[-1]
     repo_author = url.split("/")[-2]
     repo_id = repo_author + "___" + repo_name
@@ -207,7 +211,7 @@ if __name__ == "__main__":
         outputs = run_tasks_in_parallel(
             install_repo,
             urls,
-            num_workers=48,
+            num_workers=installer_num_workers,
             timeout_per_task=3000,
             use_progress_bar=True,
             progress_bar_desc="Installing repos..."
