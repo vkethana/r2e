@@ -120,7 +120,7 @@ def run_self_equiv(exec_args, simulator, conn, logger):
     else:
         outputs = run_tasks_in_parallel_iter(
             run_fut_mp,
-            [(futs[i], image_name, logger, i) for i in range(len(futs))],
+            [(futs[i], image_name, i) for i in range(len(futs))],
             num_workers=exec_args.execution_multiprocess,
             timeout_per_task=exec_args.timeout_per_task,
             use_progress_bar=True,
