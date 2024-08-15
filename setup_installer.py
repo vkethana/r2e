@@ -45,6 +45,9 @@ def reduce_data(repo_id):
     with open(extracted_file_path, 'r') as f:
         data = json.load(f)
 
+    if len(data) < 1:
+        print("WARNING: No data found in extracted file")
+
     # Write the trimmed data back to the file
     with open(extracted_file_path, 'w') as f:
         json.dump(data[0:500], f, indent=4)
