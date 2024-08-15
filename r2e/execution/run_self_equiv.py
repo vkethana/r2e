@@ -66,6 +66,7 @@ def run_fut_mp(args: tuple[FunctionUnderTest | MethodUnderTest, str, any, int]) 
     except Exception as e:
         logger.error(f"Error running the {i}th FUT at {fut.repo_id}:{repr(e)}")
         tb = traceback.format_exc()
+        raise Exception(tb)
 
     simulator.stop_container()
     conn.close()
@@ -73,8 +74,9 @@ def run_fut_mp(args: tuple[FunctionUnderTest | MethodUnderTest, str, any, int]) 
     if (output[0]):
         logger.info(f"{i}th FUT passed successfully!")
     else:
-        logger.error(f"{i}th FUT failed with output {output[1]}")
-        raise(Exception("Test failed"))
+        error_msg = f"{i}th FUT failed with output {output[1]}"
+        logger.error(error_msg)
+        raise(Exception(error_msg))
 
     return output
 
