@@ -25,6 +25,7 @@ def extract_repo_data(repo: Repo) -> tuple[list[Function], list[Method]]:
         except Exception as e:
             print(f"Error parsing {file_path}: {e}")
             continue
+        print("Entering file: ", file_path)
         function_asts = FileFunctionExtractor.extract_functions_from_ast(astree)
         file_obj = File.from_file_path(file_path, repo)
         for function_ast in function_asts:

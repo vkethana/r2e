@@ -259,7 +259,7 @@ def install_repo(url, logger):
         logger.info("Skipping dockerfile build")
 
     # check if path `logs/{image_name}_install_logs` exists
-    if not os.path.exists(f"{logger_dir}/{repo_id}_install_logs"):
+    if not os.path.exists(f"{logger_dir}/{repo_id}_install_logs/"):
         logger.info("Transferring docker logs to host machine...")
         get_install_logs_from_image(image_name)
 

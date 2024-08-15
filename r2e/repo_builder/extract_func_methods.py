@@ -36,12 +36,19 @@ def build_functions_and_methods(repo_args: RepoArgs):
             )
             return
 
-    repo_dirs = list(REPOS_DIR.glob("*"))
-    for repo_dir in repo_dirs:
-        remove_bom_from_directory(str(repo_dir))  
+    repo_id = repo_args.repo_id
+
+    try:
+        # slightly redunant because this list will always have one element
+        # TODO: fix later
+        repo_dirs = [Repo.from_file_path(str(REPOS_DIR / repo_id))]
+        for repo_dir in repo_dirs:
+            remove_bom_from_directory(str(repo_dir))
+    except Exception as e:
+        print(f"Error removing BOM from files: {e}")
 
     #repos = [Repo.from_file_path(str(repo_dir)) for repo_dir in repo_dirs]
-    repo_id = repo_args.repo_id
+    print(f"Extracting functions and methods from repo {repo_args.repo_id}..")
     assert (repo_id != "PLACEHOLDER_REPO_ID")
     repos = [Repo.from_file_path(str(REPOS_DIR / repo_id))]
 

@@ -46,7 +46,11 @@ class SetupRepos:
                 ), f"Expected list of strings, got {repo_urls}"
             SetupRepos.clone_repos_from_urls(repo_urls, repo_args.cloning_multiprocess)
         #run_pycg(repo_args)
-        transform_path()
+
+        if repo_args.repo_url:
+            transform_path(repo_args.repo_url)
+        else:
+            transform_path()
 
     @staticmethod
     def clone_repo_from_url(repo_url: str):
