@@ -31,7 +31,7 @@ from r2e.paths import R2E_BUCKET_DIR, TESTGEN_DIR, REPOS_DIR, EXTRACTED_DATA_DIR
 
 openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 client = docker.from_env()
-logger_dir = "750_repos_pt1"
+logger_dir = "1300_repos_pt1"
 
 def setup_logger(path, repo_id):
     # Check the logs directory and make it if it doesn't exist
@@ -349,18 +349,18 @@ def install_repo_from_url(url):
 # Define a function to handle the SIGINT signal (Ctrl+C)
 def signal_handler(sig, frame):
     print("Caught SIGINT, terminating child processes...")
-    
+
     # Terminate all child processes
     for process in mp.active_children():
         process.terminate()
 
     # Exit the main process
     sys.exit(0)
-    
+
 if __name__ == "__main__":
     try:
         # Open up urls.json and read the results as a list
-        with open("nomodule_urls.json", "r") as f:
+        with open("1300_repos_pt1.json", "r") as f:
             urls = json.load(f)
 
         print(f"Attempting to install {len(urls)} repos")
