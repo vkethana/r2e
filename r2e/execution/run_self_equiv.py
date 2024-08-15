@@ -66,7 +66,7 @@ def run_fut_mp(args: tuple[FunctionUnderTest | MethodUnderTest, str, any, int]) 
     except Exception as e:
         logger.error(f"Error running the {i}th FUT at {fut.repo_id}:{repr(e)}")
         tb = traceback.format_exc()
-        raise Exception(tb)
+        #raise Exception(tb)
 
     simulator.stop_container()
     conn.close()
@@ -111,6 +111,8 @@ def run_self_equiv(exec_args, simulator, conn, logger):
                 #output = run_fut_with_port(fut, exec_args.image_name)
                 logger.debug(f"Currently executing FUT: {fut}")
                 output = run_fut_with_port(fut, simulator, conn)
+                simulator.stop_container()
+                conn.close()
             except Exception as e:
                 logger.error(f"Error running FUT at {fut.repo_id}:{repr(e)}")
                 tb = traceback.format_exc()
