@@ -57,10 +57,11 @@ def run_fut_mp(args: tuple[FunctionUnderTest | MethodUnderTest, str, int]) -> tu
         # Create a dummy logger object
         dummy_logger = logging.getLogger("dummy_logger")
         dummy_logger.addHandler(logging.NullHandler())
-
         simulator, conn = get_service(fut.repo_id, port, image_name, dummy_logger)
+
     except Exception as e:
         fut.test_history.update_exec_stats({"error": repr(e)})
+        raise(e)
         return False, repr(e), fut
 
     try:
@@ -68,6 +69,7 @@ def run_fut_mp(args: tuple[FunctionUnderTest | MethodUnderTest, str, int]) -> tu
     except Exception as e:
         tb = traceback.format_exc()
         fut.test_history.update_exec_stats({"error": tb})
+        raise(e)
         return None  # Return None or another meaningful tuple
 
     simulator.stop_container()
@@ -75,6 +77,7 @@ def run_fut_mp(args: tuple[FunctionUnderTest | MethodUnderTest, str, int]) -> tu
 
     if not output[0]:
         error_msg = f"{i}th FUT failed with output {output[1]}"
+        raise(Exception(error_msg))
         return False, error_msg, fut  # Return a meaningful result
 
     return output
