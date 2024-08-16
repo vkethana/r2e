@@ -1,4 +1,5 @@
 import rpyc
+import uuid
 import random
 import traceback
 from pathlib import Path
@@ -43,7 +44,7 @@ def run_fut_with_port(
         pass
 
     fut.test_history.update_exec_stats({"error": tb})
-    #print(f"Error@{fut.repo_id}:\n{tb}")
+    print(f"Error@{fut.repo_id}:\n{tb}")
     return False, tb, fut
 
 def run_fut_mp(args: tuple[FunctionUnderTest | MethodUnderTest, str, int]) -> tuple[bool, str, FunctionUnderTest | MethodUnderTest] | None:
@@ -54,10 +55,30 @@ def run_fut_mp(args: tuple[FunctionUnderTest | MethodUnderTest, str, int]) -> tu
     port = random.randint(3000, 10000)
 
     try:
+        '''
         # Create a dummy logger object
-        dummy_logger = logging.getLogger("dummy_logger")
-        dummy_logger.addHandler(logging.NullHandler())
-        simulator, conn = get_service(fut.repo_id, port, image_name, dummy_logger)
+        second_logger = logging.getLogger(f"fut_logger_{image_name}_test_{i}"+uuid.uuid4().hex)
+        # add console handler
+        ch = logging.StreamHandler()
+        ch.setLevel(logging.DEBUG)
+        second_logger.addHandler(ch)
+
+        # check that logs/fut_logs exists
+        # if it doesn't, create it
+        if not Path("logs/fut_logs").exists():
+            Path("logs/fut_logs").mkdir(parents=True, exist_ok=True)
+
+        fh = logging.FileHandler(f"logs/fut_logs/{image_name.replace(':', '')}_test_{i}.log")
+        fh.setLevel(logging.DEBUG)
+        second_logger.addHandler(fh)
+
+        second_logger.info(f"Created logger at logs/fut_logs/{image_name.replace(':', '')}_test_{i}.log")
+        '''
+        # dummy logger
+        second_logger = logging.getLogger("dummy")
+        second_logger.addHandler(logging.NullHandler())
+
+        simulator, conn = get_service(fut.repo_id, port, image_name, second_logger)
 
     except Exception as e:
         fut.test_history.update_exec_stats({"error": repr(e)})
@@ -125,6 +146,7 @@ def run_self_equiv(exec_args, simulator, conn, logger):
             # which in most cases you dont need to actually see
             new_futs.append(output[2])
     else:
+        logger.info(f"Running FUTs in parallel.")
         outputs = run_tasks_in_parallel_iter(
             run_fut_mp,
             [(futs[i], image_name, i) for i in range(len(futs))],
@@ -132,8 +154,19 @@ def run_self_equiv(exec_args, simulator, conn, logger):
             timeout_per_task=exec_args.timeout_per_task,
             use_progress_bar=True,
         )
+        '''
+        # Code for merging together sub-logs
+        # not yet implemented
+        with open(f"logs/fut_logs/{image_name.replace(':', '')}_merged.log", "w") as merged_log:
+            for i in range(len(futs)):
+                with open(f"logs/fut_logs/{image_name.replace(':', '')}_test_{i}.log", "r") as single_log:
+                    merged_log.write(single_log.read())
+                # remove the single log file
+                Path(f"logs/fut_logs/{image_name.replace(':', '')}_test_{i}.log").unlink()
+        '''
         i = 0
-        logger.info(f"Running FUTs in parallel. Output of individual tests will not be displayed to the terminal")
+        logger.info(f"Done running FUTs in parallel.")
+
         for x in outputs:
             logger.debug(f"Appending test {i} of {len(futs)} to the testgen_out file...")
             new_futs.append(x.result[2])  # type: ignore

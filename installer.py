@@ -30,9 +30,9 @@ from r2e.paths import R2E_BUCKET_DIR, TESTGEN_DIR, REPOS_DIR, EXTRACTED_DATA_DIR
 
 openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 client = docker.from_env()
-repo_list = "small.json"
+repo_list = "1300_repos_pt1.json"
 
-oracle_num_workers = 0
+oracle_num_workers = 24
 installer_num_workers = 48
 
 def installation_oracle(simulator, conn, repo_id, logger):
@@ -168,7 +168,7 @@ def install_repo(url):
         logger.error(f"Error installing repo: {repo_id_str}")
         #logger.error(f"Exception type: {type(e)}")
         #logger.error(f"Exception args: {e.args}")
-        logger.error(f"The error of above repo: {repr(e)}")
+        logger.error(f"The error of above repo: {e}")
         #logger.error("Traceback information:")
         #logger.error(traceback.format_exc())
 
@@ -198,46 +198,36 @@ def signal_handler(sig, frame):
     sys.exit(0)
 
 if __name__ == "__main__":
-    try:
-        # Open up urls.json and read the results as a list
-        with open(repo_list, "r") as f:
-            urls = json.load(f)
+    # Open up urls.json and read the results as a list
+    with open(repo_list, "r") as f:
+        urls = json.load(f)
 
-        print(f"Attempting to install {len(urls)} repos")
+    print(f"Attempting to install {len(urls)} repos")
 
-        # TODO: Get total_fails, total_succ to work with multiprocessing
-        # Might need to use locks? shared variables? 
+    total_fails = 0
+    total_succ = 0
+    tot_len = len(urls)
 
-        total_fails = 0
-        total_succ = 0
-        tot_len = len(urls)
+    outputs = run_tasks_in_parallel(
+        install_repo,
+        urls,
+        num_workers=installer_num_workers,
+        timeout_per_task=3000,
+        use_progress_bar=True,
+        progress_bar_desc="Installing repos..."
+    )
 
-        #signal.signal(signal.SIGINT, signal_handler)
-        #parallel_execution(install_repo_from_url, urls, max_workers=2)
+    print("Quick breakdown of installations (for more detailed info scroll up):")
 
-        outputs = run_tasks_in_parallel(
-            install_repo,
-            urls,
-            num_workers=installer_num_workers,
-            timeout_per_task=3000,
-            use_progress_bar=True,
-            progress_bar_desc="Installing repos..."
-        )
+    for i in range(len(urls)):
+        url = urls[i]
+        x = outputs[i]
+        if x.is_success():
+            print(f"URL {url} was a success")
+            total_succ += 1
+        else:
+            print(f"URL {url} was a failure, or was thrown out due to bad data")
+            total_fails += 1
 
-        print("Quick breakdown of installations (for more detailed info scroll up):")
-
-        for i in range(len(urls)):
-            url = urls[i]
-            x = outputs[i]
-            if x.is_success():
-                print(f"URL {url} was a success")
-                total_succ += 1
-            else:
-                print(f"URL {url} was a failure, or was thrown out due to bad data")
-                total_fails += 1
-
-        print(f"Total successes: {total_succ}/{tot_len}")
-        print(f"Total failures: {total_fails}/{tot_len}")
-
-    except Exception as e:
-        print(f"Error: {e}")
+    print(f"Total successes: {total_succ}/{tot_len}")
+    print(f"Total failures: {total_fails}/{tot_len}")
