@@ -46,7 +46,7 @@ def run_fut_with_port(
     #print(f"Error@{fut.repo_id}:\n{tb}")
     return False, tb, fut
 
-def run_fut_mp(args: tuple[FunctionUnderTest | MethodUnderTest, str, int]) -> tuple[bool, str, FunctionUnderTest | MethodUnderTest]:
+def run_fut_mp(args: tuple[FunctionUnderTest | MethodUnderTest, str, int]) -> tuple[bool, str, FunctionUnderTest | MethodUnderTest] | None:
     fut = args[0]
     image_name = args[1]
     i = args[2]
@@ -67,16 +67,18 @@ def run_fut_mp(args: tuple[FunctionUnderTest | MethodUnderTest, str, int]) -> tu
         output = run_fut_with_port(fut, simulator, conn)
     except Exception as e:
         tb = traceback.format_exc()
-        raise Exception(tb)
+        fut.test_history.update_exec_stats({"error": tb})
+        return None  # Return None or another meaningful tuple
 
     simulator.stop_container()
     conn.close()
 
-    if not (output[0]):
+    if not output[0]:
         error_msg = f"{i}th FUT failed with output {output[1]}"
-        raise(Exception(error_msg))
+        return False, error_msg, fut  # Return a meaningful result
 
     return output
+
 
 def run_self_equiv(exec_args, simulator, conn, logger):
     logger.info(f"Running FUTs from {exec_args.testgen_exp_id}.json")
@@ -137,7 +139,7 @@ def run_self_equiv(exec_args, simulator, conn, logger):
                 new_futs.append(x.result[2])  # type: ignore
             else:
                 logger.error("x.result is None, cannot access index 2")
-                
+
             if x.is_success():
                 logger.info(f"Test {i} of {len(futs)} passed successfully!")
             else:
