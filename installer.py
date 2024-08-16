@@ -32,7 +32,7 @@ openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 client = docker.from_env()
 repo_list = "small.json"
 
-oracle_num_workers = 5
+oracle_num_workers = 10
 installer_num_workers = 48
 
 def installation_oracle(simulator, conn, repo_id, logger):
@@ -103,7 +103,6 @@ def install_repo(url):
     '''
     Clone, extract tests for, and install the repo at the given URL
     '''
-    logger_dir = LOGGER_DIR
     repo_name = url.split("/")[-1]
     repo_author = url.split("/")[-2]
     repo_id = repo_author + "___" + repo_name
@@ -111,7 +110,7 @@ def install_repo(url):
     #repo_path = "~/buckets/local_repoeval_bucket/repos/" + repo_id
     repo_path = REPOS_DIR / repo_id
 
-    logger = setup_logger(f"{logger_dir}/{repo_id}_install.log", repo_id)
+    logger = setup_logger(f"{repo_id}_install.log", repo_id)
 
     logger.info(f"Attempting to install: {url}\n")
 
@@ -128,6 +127,7 @@ def install_repo(url):
     #setup_repo_already_done = cloned_repo_exists and extracted_tests_exist and testgen_exists
     # Important: cloned_repo_exists and extracted_tests_exist don't do anything right now. 
     # all that matters is whether the testgen file and docker image exist
+    '''
 
     if not testgen_exists:
         setup_repo(url, repo_id, logger)
@@ -146,6 +146,7 @@ def install_repo(url):
         get_install_logs_from_image(image_name)
 
     did_install_fail = True
+    '''
 
     try:
         simulator, conn = init_docker(repo_id, image_name, logger)

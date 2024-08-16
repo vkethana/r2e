@@ -84,6 +84,8 @@ def setup_logger(path, repo_id):
     if not os.path.exists(logger_dir):
         os.makedirs(logger_dir)
 
+    path = os.path.join(logger_dir, path)
+
     # Create a logger object
     logger = logging.getLogger(f"logger_{repo_id}")
     logger.setLevel(logging.DEBUG)
@@ -121,21 +123,25 @@ def setup_logger(path, repo_id):
 def analyze_tests(file_path):
     with open(file_path, 'r') as file:
         data = json.load(file)
-    
+    assert(type(data) == list)
+    if len(data) > 0:
+        assert(type(data[0]) == dict)
+
     total_tests = len(data)
     passed_tests = 0
-    
+
     for entry in data:
         test_history = entry.get('test_history', {})
         history = test_history.get('history', [])
-        
+
         if history:
             latest_test = history[-1]
             exec_stats = latest_test.get('exec_stats', {})
-            
+
             if 'error' not in exec_stats:
                 passed_tests += 1
-    
+
+    print("Found ", passed_tests, " passed tests out of ", total_tests, " total tests")
     return passed_tests, total_tests
 
 
