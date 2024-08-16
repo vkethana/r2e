@@ -112,7 +112,7 @@ def install_repo(url):
     repo_path = REPOS_DIR / repo_id
 
     logger = setup_logger(f"{logger_dir}/{repo_id}_install.log", repo_id)
-    
+
     logger.info(f"Attempting to install: {url}\n")
 
     # Check if repo has already been installed
@@ -163,9 +163,16 @@ def install_repo(url):
             # Print out failed repo
             logger.info(f"INSTALLATION FAILURE: {repo_id}")
 
+
     except Exception as e:
-        logger.error(f"Error installing repo: {repo_id} -- {repr(e)}")
-        raise e
+        repo_id_str = repo_id if repo_id is not None else "Unknown repo_id"
+        logger.error(f"Error installing repo: {repo_id_str}")
+        #logger.error(f"Exception type: {type(e)}")
+        #logger.error(f"Exception args: {e.args}")
+        logger.error(f"The error of above repo: {repr(e)}")
+        #logger.error("Traceback information:")
+        #logger.error(traceback.format_exc())
+
 
     finally:
         # Always stop the container
