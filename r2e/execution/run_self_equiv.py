@@ -133,9 +133,9 @@ def run_self_equiv(exec_args, simulator, conn, logger):
         i = 0
         logger.info(f"Printing out breakdown of results:")
         for x in outputs:
+            new_futs.append(x.result[2])  # type: ignore
             if x.is_success():
                 logger.info(f"Test {i} of {len(futs)} passed successfully!")
-                new_futs.append(x.result[2])  # type: ignore
             else:
                 logger.error(f"Test {i} of {len(futs)} failed! Traceback: {x.exception_tb}")
                 num_fails += 1
