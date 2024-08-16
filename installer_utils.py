@@ -1,14 +1,14 @@
 import os
 import json
 import random
-from r2e.paths import HOME_DIR
+from r2e.paths import HOME_DIR, LOGGER_DIR
 import docker
 import logging
 import time
 import tarfile
 
 R2E_REPO = HOME_DIR / "r2e"
-logger_dir = "isolate"
+logger_dir = LOGGER_DIR
 
 def clear_repos_folder():
     # Check if there are any files or folders in ~/buckets/local_repoeval_bucket/repos
@@ -112,6 +112,7 @@ def setup_logger(path, repo_id):
     # Silence debug messages from docker and urllib
     logging.getLogger("docker.utils.config").setLevel(logging.WARNING)
     logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
+    logger.info("<<<<<<<<<<<<<<<<<< Logger setup anew <<<<<<<<<<<<<<<<<<<")
 
     print("Successfully set up logger at path ", path)
     return logger

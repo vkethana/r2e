@@ -26,11 +26,11 @@ from r2e.execution.execute_futs import self_equiv_futs
 from r2e.multiprocess import run_tasks_in_parallel
 
 from installer_utils import *
-from r2e.paths import R2E_BUCKET_DIR, TESTGEN_DIR, REPOS_DIR, EXTRACTED_DATA_DIR, LOCAL_EVAL_DIR
+from r2e.paths import R2E_BUCKET_DIR, TESTGEN_DIR, REPOS_DIR, EXTRACTED_DATA_DIR, LOCAL_EVAL_DIR, LOGGER_DIR
 
 openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 client = docker.from_env()
-repo_list = "1300_repos_pt1.json"
+repo_list = "small.json"
 
 oracle_num_workers = 5
 installer_num_workers = 48
@@ -103,7 +103,7 @@ def install_repo(url):
     '''
     Clone, extract tests for, and install the repo at the given URL
     '''
-    logger_dir = "isolate"
+    logger_dir = LOGGER_DIR
     repo_name = url.split("/")[-1]
     repo_author = url.split("/")[-2]
     repo_id = repo_author + "___" + repo_name
@@ -112,6 +112,7 @@ def install_repo(url):
     repo_path = REPOS_DIR / repo_id
 
     logger = setup_logger(f"{logger_dir}/{repo_id}_install.log", repo_id)
+    
     logger.info(f"Attempting to install: {url}\n")
 
     # Check if repo has already been installed
