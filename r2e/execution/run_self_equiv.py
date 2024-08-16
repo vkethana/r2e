@@ -61,26 +61,23 @@ def run_fut_mp(args: tuple[FunctionUnderTest | MethodUnderTest, str, int]) -> tu
 
     except Exception as e:
         fut.test_history.update_exec_stats({"error": repr(e)})
-        raise(e)
+        print("Service error@", fut.repo_id, repr(e))
         return False, repr(e), fut
 
     try:
-        output = run_fut_with_port(fut, simulator, conn)
+        return self_equiv_futs([fut], conn)
+
     except Exception as e:
         tb = traceback.format_exc()
-        fut.test_history.update_exec_stats({"error": tb})
-        raise(e)
-        return None  # Return None or another meaningful tuple
+        pass
 
-    simulator.stop_container()
-    conn.close()
+    finally:
+        simulator.stop_container()
+        conn.close()
 
-    if not output[0]:
-        error_msg = f"{i}th FUT failed with output {output[1]}"
-        raise(Exception(error_msg))
-        return False, error_msg, fut  # Return a meaningful result
-
-    return output
+    fut.test_history.update_exec_stats({"error": tb})
+    print(f"Error@{fut.repo_id}:\n{tb}")
+    return False, tb, fut
 
 
 def run_self_equiv(exec_args, simulator, conn, logger):
@@ -136,23 +133,14 @@ def run_self_equiv(exec_args, simulator, conn, logger):
             use_progress_bar=True,
         )
         i = 0
-        logger.info(f"Printing out breakdown of results:")
+        logger.info(f"Running FUTs in parallel. Output of individual tests will not be displayed to the terminal")
         for x in outputs:
-            if x.result is not None:
-                new_futs.append(x.result[2])  # type: ignore
-            else:
-                logger.error("x.result is None, cannot access index 2")
-
-            if x.is_success():
-                logger.info(f"Test {i} of {len(futs)} passed successfully!")
-            else:
-                logger.error(f"Test {i} of {len(futs)} failed! Traceback: {x.exception_tb}")
-                num_fails += 1
-                logger.info(f"Total number of fails so far: {num_fails}")
+            logger.debug(f"Appending test {i} of {len(futs)} to the testgen_out file...")
+            new_futs.append(x.result[2])  # type: ignore
+            if not x.is_success():
+                logger.error(f"Test {i} of {len(futs)} ran into a service error (result of the FUT is unknown; it could not be executed): {x.exception_tb}")
             i += 1
 
-    if len(futs) > 0:
-        logger.info(f"Number of failed tests: {num_fails} out of {len(futs)} tests, pass rate is {round((len(futs) - num_fails)/len(futs), 2)}")
     write_functions_under_test(
         new_futs, TESTGEN_DIR / f"{exec_args.testgen_exp_id}_out.json"
     )
