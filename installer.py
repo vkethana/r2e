@@ -52,7 +52,7 @@ def installation_oracle(simulator, conn, repo_id, logger):
     #command = f"python r2e/execution/run_self_equiv.py --testgen_exp_id temp_generate --image_name {image_name} --execution_multiprocess 0"
     try:
         logger.debug(f"Checking execution status...")
-        num_passed_tests, num_total_tests = analyze_tests(str(TESTGEN_DIR) + f"/{repo_id}_generate_out.json")
+        num_passed_tests, num_total_tests = analyze_tests(str(TESTGEN_DIR) + f"/{repo_id}_generate_out.json", logger)
 
         if num_total_tests == 0:
             logger.error("BLANK REPO ERROR: Repo should be discarded. It has no Python files to test")
@@ -64,7 +64,7 @@ def installation_oracle(simulator, conn, repo_id, logger):
         return num_passed_tests/num_total_tests
 
     except Exception as e:
-        logger.ERROR(f"Encountered error when checking execution status: {e}")
+        logger.error(f"Encountered error when checking execution status: {e}")
         return 0
 
 
@@ -127,7 +127,6 @@ def install_repo(url):
     #setup_repo_already_done = cloned_repo_exists and extracted_tests_exist and testgen_exists
     # Important: cloned_repo_exists and extracted_tests_exist don't do anything right now. 
     # all that matters is whether the testgen file and docker image exist
-    '''
 
     if not testgen_exists:
         setup_repo(url, repo_id, logger)
@@ -146,7 +145,6 @@ def install_repo(url):
         get_install_logs_from_image(image_name)
 
     did_install_fail = True
-    '''
 
     try:
         simulator, conn = init_docker(repo_id, image_name, logger)

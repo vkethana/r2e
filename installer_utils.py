@@ -54,7 +54,7 @@ def reduce_data(repo_id):
 
     # Write the trimmed data back to the file
     with open(extracted_file_path, 'w') as f:
-        json.dump(data[0:500], f, indent=4)
+        json.dump(data[0:100], f, indent=4)
 
 def make_equiv_test(repo_id):
     # Generate the equivalence tests
@@ -120,17 +120,26 @@ def setup_logger(path, repo_id):
     return logger
 
 
-def analyze_tests(file_path):
+def analyze_tests(file_path, logger):
+
+    logger.info(f"Reading FUT data at path {file_path}")
+
     with open(file_path, 'r') as file:
         data = json.load(file)
+
     assert(type(data) == list)
     if len(data) > 0:
         assert(type(data[0]) == dict)
 
     total_tests = len(data)
     passed_tests = 0
+    no_history_tests = 0
+
+    logger.debug(f"Detected {total_tests} tests in the file. Analyzing...")
+    i = 0
 
     for entry in data:
+        logger.debug(f"Analyzing test {i} of {total_tests}")
         test_history = entry.get('test_history', {})
         history = test_history.get('history', [])
 
@@ -140,8 +149,18 @@ def analyze_tests(file_path):
 
             if 'error' not in exec_stats:
                 passed_tests += 1
+                logger.info(f"Test {i} passed")
+            else:
+                logger.warning(f"Test {i} failed with error msg: {exec_stats['error']}")
 
-    print("Found ", passed_tests, " passed tests out of ", total_tests, " total tests")
+        else:
+            no_history_tests += 1
+            logger.warning(f"Test {i} has no history. Skipping...")
+
+        i += 1
+
+    logger.info(f"Passed {passed_tests} out of {total_tests} tests")
+    logger.info(f"Skipped {no_history_tests} tests due to missing history")
     return passed_tests, total_tests
 
 
