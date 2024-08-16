@@ -32,7 +32,7 @@ openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 client = docker.from_env()
 repo_list = "small.json"
 
-oracle_num_workers = 10
+oracle_num_workers = 0
 installer_num_workers = 48
 
 def installation_oracle(simulator, conn, repo_id, logger):

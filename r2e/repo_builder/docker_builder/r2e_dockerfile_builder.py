@@ -31,8 +31,9 @@ def main(repo_args: RepoArgs):
         )
     dockerfile += "RUN python3 tests.py\n\n"
 
+    final_dockerfile_path = f"r2e/repo_builder/docker_builder/r2e_final_dockerfile_{repo_args.repo_id}.dockerfile"
     with open(
-        "r2e/repo_builder/docker_builder/r2e_final_dockerfile.dockerfile", "w"
+        final_dockerfile_path, "w"
     ) as f:
         # Print out the dockerfile path
         print(f"\nDockerfile created at path {os.path.abspath(f.name)}")

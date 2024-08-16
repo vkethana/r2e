@@ -74,10 +74,15 @@ def setup_repo(url,repo_id, logger):
 def setup_container(image_name, repo_id, logger):
     logger.debug("Building dockerfile...")
     os.system(f"cd {R2E_REPO} && python r2e/repo_builder/docker_builder/r2e_dockerfile_builder.py --install_batch_size 1 --repo_id {repo_id}")
-    #os.system(f"cd ~/buckets/local_repoeval_bucket/repos && pip install pipreqs")
-    #os.system(f"cd ~/buckets/local_repoeval_bucket/repos && pipreqs . --force")
-    logger.debug("Building docker image...")
-    os.system(f"cd ~/buckets/local_repoeval_bucket/repos && docker build -t {image_name} -f {R2E_REPO}/r2e/repo_builder/docker_builder/r2e_final_dockerfile.dockerfile .")
+
+    # Double-check that the docker image actually got created
+    dockerfile_path = f"{R2E_REPO}/r2e/repo_builder/docker_builder/r2e_final_dockerfile_{repo_id}.dockerfile"
+    if not os.path.exists(dockerfile_path):
+        logger.critical("Dockerfile was not successfully generated!")
+        return
+
+    logger.debug(f"Building docker image at path {dockerfile_path}...")
+    os.system(f"cd ~/buckets/local_repoeval_bucket/repos && docker build -t {image_name} -f {dockerfile_path} .")
 
 def setup_logger(path, repo_id):
     # Check the logs directory and make it if it doesn't exist
