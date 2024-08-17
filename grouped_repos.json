@@ -1,74 +1,70 @@
 {
     "Installation Summary": {
-        "total": 50,
-        "fails": 38,
-        "successes": 12,
-        "success rate": 0.24
+        "total": 57,
+        "fails": 0,
+        "successes": 57,
+        "success rate": 1.0
     },
-    "Failed Installations": {
-        "ModuleNotFoundError (22)": [
-            "https://github.com/public-apis/public-apis",
-            "https://github.com/donnemartin/system-design-primer",
-            "https://github.com/Significant-Gravitas/Auto-GPT",
-            "https://github.com/jackfrued/Python-100-Days",
-            "https://github.com/huggingface/transformers",
-            "https://github.com/hwchase17/langchain",
-            "https://github.com/521xueweihan/HelloGitHub",
-            "https://github.com/pytorch/pytorch",
-            "https://github.com/tensorflow/models",
-            "https://github.com/yt-dlp/yt-dlp",
-            "https://github.com/home-assistant/core",
-            "https://github.com/scikit-learn/scikit-learn",
-            "https://github.com/ageitgey/face_recognition",
-            "https://github.com/ansible/ansible",
-            "https://github.com/iperov/DeepFaceLab",
-            "https://github.com/trailofbits/manticore",
-            "https://github.com/ultralytics/yolov5",
-            "https://github.com/scanapi/scanapi",
-            "https://github.com/chiphuyen/stanford-tensorflow-tutorials",
-            "https://github.com/microsoft/ML-For-Beginners",
-            "https://github.com/The-Art-of-Hacking/h4cker",
-            "https://github.com/ageron/handson-ml"
-        ],
-        "ImportError (12)": [
-            "https://github.com/ytdl-org/youtube-dl",
-            "https://github.com/nvbn/thefuck",
-            "https://github.com/pallets/flask",
-            "https://github.com/tensorflow/tensorflow",
-            "https://github.com/pypa/pipenv",
-            "https://github.com/pytest-dev/pytest",
-            "https://github.com/joke2k/faker",
-            "https://github.com/google/jax",
-            "https://github.com/scrapy/scrapy",
-            "https://github.com/plotly/dash",
-            "https://github.com/huggingface/datasets",
-            "https://github.com/slundberg/shap"
-        ],
-        "KeyError (1)": [
-            "https://github.com/django/django"
-        ],
-        "UnsupportedOperation (1)": [
-            "https://github.com/sqlmapproject/sqlmap"
-        ],
-        "ImproperlyConfigured (1)": [
-            "https://github.com/graphite-project/graphite-web"
-        ],
-        "NameError (1)": [
-            "https://github.com/donnemartin/haxor-news"
-        ]
-    },
+    "Failed Installations": {},
     "Successful Installations": {
-        "Successes (12)": [
-            "https://github.com/dbt-labs/dbt-core",
-            "https://github.com/vinta/awesome-python",
-            "https://github.com/quantumblacklabs/kedro",
-            "https://github.com/rougier/numpy-100",
-            "https://github.com/TheAlgorithms/Python",
-            "https://github.com/tiangolo/fastapi",
-            "https://github.com/psf/requests",
-            "https://github.com/microsoft/playwright-python",
-            "https://github.com/psf/black",
-            "https://github.com/mwaskom/seaborn"
+        "Successes (57)": [
+            "https://github.com/kelvins/algoritmos-e-estruturas-de-dados",
+            "https://github.com/google-research/fast-soft-sort",
+            "https://github.com/mjansson/rpmalloc",
+            "https://github.com/encode/requests-async",
+            "https://github.com/defparam/smuggler",
+            "https://github.com/google-research/big_transfer",
+            "https://github.com/omoindrot/tensorflow-triplet-loss",
+            "https://github.com/jiesutd/latticelstm",
+            "https://github.com/selfboot/leetcode",
+            "https://github.com/sgrvinod/a-pytorch-tutorial-to-machine-translation",
+            "https://github.com/chris7/django-djangui",
+            "https://github.com/rick-mccoy/reformer-pytorch",
+            "https://github.com/tugstugi/pytorch-speech-commands",
+            "https://github.com/alstr/todo-to-issue-action",
+            "https://github.com/nnbbxx/baota-panel",
+            "https://github.com/znxlwm/ugatit-pytorch",
+            "https://github.com/neozhaoliang/surround-view-system-introduction",
+            "https://github.com/lazywen/graily",
+            "https://github.com/openai/improved-gan",
+            "https://github.com/keguoyu/minijvm",
+            "https://github.com/intoli/exodus",
+            "https://github.com/mbhushan/dpv",
+            "https://github.com/uoip/ssd-variants",
+            "https://github.com/bamos/dcgan-completion.tensorflow",
+            "https://github.com/zhanyong-wan/dongbei",
+            "https://github.com/nlpscott/bert-chinese-classification-task",
+            "https://github.com/eerykitty/cve-2020-0796-poc",
+            "https://github.com/calebmadrigal/algorithms-in-python",
+            "https://github.com/arkane-systems/genie",
+            "https://github.com/patricklib/captcha_recognize",
+            "https://github.com/robertlucian/cortex-license-plate-reader-client",
+            "https://github.com/juliapoo/multihand-tracking",
+            "https://github.com/abhishekkr/gmail-helper",
+            "https://github.com/ee0703/console_video",
+            "https://github.com/jamesob/tinychain",
+            "https://github.com/al0ne/vxscan",
+            "https://github.com/lenkimo/byte-of-python",
+            "https://github.com/lam1360/yolov3-model-pruning",
+            "https://github.com/yoyoyohamapi/mit-ml",
+            "https://github.com/qiu-hanqiao/system-design-primer",
+            "https://github.com/kevin-ssy/fishnet",
+            "https://github.com/friends-of-tracking-data-fotd/laurieontracking",
+            "https://github.com/atenreiro/opensquat",
+            "https://github.com/mortimer-cra/alarmrobot",
+            "https://github.com/cfzd/ultra-fast-lane-detection",
+            "https://github.com/bl0/moco",
+            "https://github.com/openai/finetune-transformer-lm",
+            "https://github.com/aws/aws-graviton-getting-started",
+            "https://github.com/ayooshkathuria/pytorch-yolo-v3",
+            "https://github.com/szq0214/meal-v2",
+            "https://github.com/facedetect/jointcascade_py",
+            "https://github.com/alcarithemad/zfsp",
+            "https://github.com/mendhak/waveshare-epaper-display",
+            "https://github.com/facebookresearch/synsin",
+            "https://github.com/miaoshuyu/object-detection-usages",
+            "https://github.com/cszn/usrnet",
+            "https://github.com/dodger487/dplython"
         ]
     }
 }

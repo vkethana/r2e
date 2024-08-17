@@ -15,7 +15,7 @@ R2E_BUCKET_DIR = HOME_DIR / config["r2e_bucket_dir"]
 LOCAL_EVAL_DIR = HOME_DIR / "buckets" / "local_repoeval_bucket"
 REPOS_DIR = HOME_DIR / config["repos_dir"]
 CACHE_DIR = HOME_DIR / config["cache_dir"]
-LOGGER_DIR = HOME_DIR / "r2e" / "logs"
+LOGGER_DIR = HOME_DIR / "r2e" / "logs_pt2"
 
 GRAPHS_DIR = R2E_BUCKET_DIR / "repo_graphs"
 INTERESTING_FUNCS_DIR = R2E_BUCKET_DIR / "interesting_functions"

@@ -30,7 +30,7 @@ from r2e.paths import R2E_BUCKET_DIR, TESTGEN_DIR, REPOS_DIR, EXTRACTED_DATA_DIR
 
 openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 client = docker.from_env()
-repo_list = "1300_repos_pt1.json"
+repo_list = "1300_repos_pt2.json"
 
 oracle_num_workers = 24
 installer_num_workers = 48
@@ -199,28 +199,48 @@ def signal_handler(sig, frame):
 
 if __name__ == "__main__":
     # Open up urls.json and read the results as a list
-    with open(repo_list, "r") as f:
-        urls = json.load(f)
+    # Open up urls.json and read the results as a list
+with open(repo_list, "r") as f:
+    urls = json.load(f)
 
-    print(f"Attempting to install {len(urls)} repos")
+print(f"Attempting to install {len(urls)} repos")
 
-    total_fails = 0
-    total_succ = 0
-    tot_len = len(urls)
+total_fails = 0
+total_succ = 0
+tot_len = len(urls)
 
+# Define a function to prune Docker images and containers
+def prune_docker():
+    print("Pruning Docker images and containers...")
+    subprocess.run(["docker", "system", "prune", "-a", "-f"])
+    print("Docker prune completed.")
+
+# Install repos in 100 piecemeal
+segment_size = 100
+for start in range(0, len(urls), segment_size):
+    end = min(start + segment_size, len(urls))
+    segment_urls = urls[start:end]
+
+    print(f"Installing segment {start + 1} to {end}...")
+
+    # Confirm cleaning process
+    prune_confirm = input("Do you want to prune Docker before continuing? (y/n): ").strip().lower()
+    if prune_confirm == 'y':
+        prune_docker()
+
+    # Run the installation for the current segment
     outputs = run_tasks_in_parallel(
         install_repo,
-        urls,
+        segment_urls,
         num_workers=installer_num_workers,
         timeout_per_task=3000,
         use_progress_bar=True,
-        progress_bar_desc="Installing repos..."
+        progress_bar_desc=f"Installing repos {start + 1} to {end}..."
     )
 
-    print("Quick breakdown of installations (for more detailed info scroll up):")
-
-    for i in range(len(urls)):
-        url = urls[i]
+    # Analyze the results for the current segment
+    for i in range(len(segment_urls)):
+        url = segment_urls[i]
         x = outputs[i]
         if x.is_success():
             print(f"URL {url} was a success")
@@ -228,6 +248,15 @@ if __name__ == "__main__":
         else:
             print(f"URL {url} was a failure, or was thrown out due to bad data")
             total_fails += 1
+
+    print(f"Segment {start + 1} to {end} completed.")
+    print(f"Total successes so far: {total_succ}/{tot_len}")
+    print(f"Total failures so far: {total_fails}/{tot_len}")
+
+    # Pause before starting the next segment
+    if end < len(urls):
+        input("Press Enter to continue to the next segment...")
+
 
     print(f"Total successes: {total_succ}/{tot_len}")
     print(f"Total failures: {total_fails}/{tot_len}")
