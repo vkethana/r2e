@@ -26,15 +26,14 @@ from r2e.execution.execute_futs import self_equiv_futs
 from r2e.multiprocess import run_tasks_in_parallel
 
 from installer_utils import *
-from r2e.paths import R2E_BUCKET_DIR, TESTGEN_DIR, REPOS_DIR, EXTRACTED_DATA_DIR, LOCAL_EVAL_DIR, LOGGER_DIR, config
+from r2e.paths import R2E_BUCKET_DIR, TESTGEN_DIR, REPOS_DIR, EXTRACTED_DATA_DIR, LOCAL_EVAL_DIR, LOGGER_DIR
 
 openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 client = docker.from_env()
+repo_list = "1300_repos_pt1.json"
 
-# import url_list, oracle_num_workers, installer_num_workers
-url_list = config["url_list"]
-oracle_num_workers = config["oracle_num_workers"]
-installer_num_workers = config["installer_num_workers"]
+oracle_num_workers = 24
+installer_num_workers = 48
 
 def installation_oracle(simulator, conn, repo_id, logger):
     # This function abstracts the verification command
@@ -204,7 +203,7 @@ def signal_handler(sig, frame):
 if __name__ == "__main__":
     # Open up urls.json and read the results as a list
     # Open up urls.json and read the results as a list
-    with open(url_list, "r") as f:
+    with open(repo_list, "r") as f:
         urls = json.load(f)
 
     print(f"Attempting to install {len(urls)} repos")
@@ -213,46 +212,22 @@ if __name__ == "__main__":
     total_succ = 0
     tot_len = len(urls)
 
-    # Customizable, can add log processing as well
     def prune_docker():
-        import subprocess
-
-    def prune_docker():
-        print("Pruning Docker. This takes up to 4 minutes.")
         try:
-            subprocess.run(
-                ["docker", "system", "prune", "-a", "-f", "--volumes"],
-                timeout=240
-            )
-        except subprocess.TimeoutExpired:
-            print("Docker prune stopped to save time.")
-        
-        print("Cleaning up /var/lib/docker. This takes another 2 minutes.")
-        try:
-            subprocess.run(
-                ["sudo", "-s", "systemctl", "stop", "docker"],
-                timeout=5
-            )
-            subprocess.run(
-                ["sudo", "rm", "-rf", "/var/lib/docker"],
-                timeout=120  # Don't think this is too important but we'll see
-            )
-            subprocess.run(
-                ["sudo", "-s", "systemctl", "start", "docker"],
-                timeout=5
-            )
-            subprocess.run(
-                ["exit"],
-                timeout=3
-            )
-        except subprocess.TimeoutExpired:
-            print("Docker stop/cleanup process stopped to save time.")
-
-        print("Cleaning done, current disk usage at: ")
-
-        subprocess.run(["df", "-h"])
-        
-
+            print("Pruning Docker.")
+            # 4 minutes timeout
+            proc = subprocess.Popen(["docker", "system", "prune", "-a", "-f", "--volumes"], stdout=subprocess.PIPE)
+            t = 240
+            try:
+                stdout = proc.communicate(timeout=t)
+                return stdout
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                stdout = proc.communicate()
+                print(f"Pruning process killed due to timeout of {t}.")
+                return stdout
+        except Exception as e:
+            print(f"An error occurred: {e}")
 
     # Install repos in 50 piecemeal
     segment_size = 50
@@ -269,7 +244,7 @@ if __name__ == "__main__":
         if prune_confirm == 'y':
             prune_docker()
         else:
-            print("Continuing. Beware of space management.")
+            print("Skip pruning. Beware of space management.")
 
         # For each segment run this
         outputs = run_tasks_in_parallel(
