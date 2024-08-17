@@ -30,7 +30,7 @@ from r2e.paths import R2E_BUCKET_DIR, TESTGEN_DIR, REPOS_DIR, EXTRACTED_DATA_DIR
 
 openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 client = docker.from_env()
-repo_list = "1300_repos_pt2.json"
+repo_list = "1300_repos_pt1.json"
 
 oracle_num_workers = 24
 installer_num_workers = 48
@@ -89,7 +89,8 @@ def get_service(repo_id: str, port: int, image_name: str, logger: None) -> tuple
     return simulator, conn
 
 def init_docker(repo_name, image_name, logger):
-    port = random.randint(3000, 10000) # Random port
+    #port = random.randint(3000, 10000) # Random port
+    port = 3001
     #print(f"PORT NUMBER IS: {port} !!!!!!!!!!!!!!\n")
     try:
         assert logger is not None
@@ -147,7 +148,10 @@ def install_repo(url):
     did_install_fail = True
 
     try:
-        simulator, conn = init_docker(repo_id, image_name, logger)
+        if oracle_num_workers == 0:
+            simulator, conn = init_docker(repo_id, image_name, logger)
+        else:
+            simulator, conn = None, None
         #agentic_loop(image_name, repo_name, simulator, conn) # no agentic loop for now
 
         ratio = installation_oracle(simulator, conn, repo_id, logger)
@@ -166,23 +170,22 @@ def install_repo(url):
     except Exception as e:
         repo_id_str = repo_id if repo_id is not None else "Unknown repo_id"
         logger.error(f"Error installing repo: {repo_id_str}")
-        #logger.error(f"Exception type: {type(e)}")
-        #logger.error(f"Exception args: {e.args}")
+        logger.error(f"Exception type: {type(e)}")
+        logger.error(f"Exception args: {e.args}")
         logger.error(f"The error of above repo: {e}")
-        #logger.error("Traceback information:")
-        #logger.error(traceback.format_exc())
+        logger.error("Traceback information:")
+        logger.error(traceback.format_exc())
 
 
     finally:
         # Always stop the container
-        print("Closing connection and stopping container")
-        simulator.stop_container()
-        logger.debug(f"Stopped container for {repo_id}")
-        conn.close()
+        if simulator:
+            print("Closing connection and stopping container")
+            simulator.stop_container()
+            logger.debug(f"Stopped container for {repo_id}")
+        if conn:
+            conn.close()
         print("Done with connection and container close")
-
-    if did_install_fail:
-        raise Exception(f"Installation failed for {repo_id}")
 
     return did_install_fail
 
@@ -282,10 +285,14 @@ if __name__ == "__main__":
             url = segment_urls[i]
             x = outputs[i]
             if x.is_success():
-                print(f"URL {url} was a success")
-                total_succ += 1
+                if x.result:
+                    print(f"URL {url} was a success")
+                    total_succ += 1
+                else:
+                    print(f"URL {url} was a failure")
+                    total_fails += 1
             else:
-                print(f"URL {url} was a failure, or was thrown out due to bad data")
+                print(f"URL {url} ran into an error during installation")
                 total_fails += 1
 
         print(f"Segment {start + 1} to {end} completed.")

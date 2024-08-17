@@ -109,7 +109,7 @@ def setup_logger(path, repo_id):
 
     # Create stream handler
     stream_handler = logging.StreamHandler()
-    stream_handler.setLevel(logging.INFO)
+    stream_handler.setLevel(logging.DEBUG)
     stream_handler.setFormatter(formatter)
 
     # Add handlers to logger
