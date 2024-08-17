@@ -54,20 +54,22 @@ def run_fut_mp(args: tuple[FunctionUnderTest | MethodUnderTest, str, int]) -> tu
     i = args[2]
 
     port = random.randint(3000, 10000)
-    print("Running fut MP")
 
     log_stream = StringIO()
     second_logger = logging.getLogger(f"logger_{image_name}_{i}")
     handler = logging.StreamHandler(log_stream)
     second_logger.setLevel(logging.DEBUG)
     second_logger.addHandler(handler)
+    second_logger.info("Logger initialized")
 
     try:
+        second_logger.debug(f"Getting service for {fut.repo_id}")
         simulator, conn = get_service(fut.repo_id, port, image_name, second_logger)
 
     except Exception as e:
         fut.test_history.update_exec_stats({"error": repr(e)})
         print("Service error@", fut.repo_id, repr(e))
+        second_logger.debug("Service error@", fut.repo_id, repr(e))
         # Get the log output
         log_contents = log_stream.getvalue()
         second_logger.removeHandler(handler)
@@ -76,6 +78,7 @@ def run_fut_mp(args: tuple[FunctionUnderTest | MethodUnderTest, str, int]) -> tu
         return False, repr(e), fut, log_contents
 
     print("Got service successfully")
+    second_logger.debug("Got service successfully")
     try:
         log_contents = log_stream.getvalue()
         second_logger.removeHandler(handler)
@@ -83,9 +86,8 @@ def run_fut_mp(args: tuple[FunctionUnderTest | MethodUnderTest, str, int]) -> tu
 
         print("Running self equiv futs")
         res = self_equiv_futs([fut], conn)
+        res.append(log_contents)
         return res
-        #res.append(log_contents)
-        #return res
 
     except Exception as e:
         tb = traceback.format_exc()
@@ -96,6 +98,8 @@ def run_fut_mp(args: tuple[FunctionUnderTest | MethodUnderTest, str, int]) -> tu
         conn.close()
 
     print("Running self equiv futs failed: ", tb)
+    second_logger.debug("Running self equiv futs failed: ", tb)
+
     log_contents = log_stream.getvalue()
     second_logger.removeHandler(handler)
     handler.close()

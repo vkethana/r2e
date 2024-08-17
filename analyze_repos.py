@@ -22,8 +22,8 @@ def scan_logs_for_error(directory, error_phrase):
 
 # Set your directory path here
 directory_path = "logs_pt1/"
-#scan_logs_for_error(directory_path, "BLANK REPO ERROR")
-#scan_logs_for_error(directory_path, "UnixHTTPConnection")
+scan_logs_for_error(directory_path, "BLANK REPO ERROR")
+scan_logs_for_error(directory_path, "UnixHTTPConnection")
 scan_logs_for_error(directory_path, "INSTALLATION SUCCEEDED")
 
 
