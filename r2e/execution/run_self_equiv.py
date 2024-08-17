@@ -3,6 +3,7 @@ import uuid
 import random
 import traceback
 from pathlib import Path
+from io import StringIO
 
 import fire
 
@@ -53,40 +54,38 @@ def run_fut_mp(args: tuple[FunctionUnderTest | MethodUnderTest, str, int]) -> tu
     i = args[2]
 
     port = random.randint(3000, 10000)
+    print("Running fut MP")
+
+    log_stream = StringIO()
+    second_logger = logging.getLogger(f"logger_{image_name}_{i}")
+    handler = logging.StreamHandler(log_stream)
+    second_logger.setLevel(logging.DEBUG)
+    second_logger.addHandler(handler)
 
     try:
-        '''
-        # Create a dummy logger object
-        second_logger = logging.getLogger(f"fut_logger_{image_name}_test_{i}"+uuid.uuid4().hex)
-        # add console handler
-        ch = logging.StreamHandler()
-        ch.setLevel(logging.DEBUG)
-        second_logger.addHandler(ch)
-
-        # check that logs/fut_logs exists
-        # if it doesn't, create it
-        if not Path("logs/fut_logs").exists():
-            Path("logs/fut_logs").mkdir(parents=True, exist_ok=True)
-
-        fh = logging.FileHandler(f"logs/fut_logs/{image_name.replace(':', '')}_test_{i}.log")
-        fh.setLevel(logging.DEBUG)
-        second_logger.addHandler(fh)
-
-        second_logger.info(f"Created logger at logs/fut_logs/{image_name.replace(':', '')}_test_{i}.log")
-        '''
-        # dummy logger
-        second_logger = logging.getLogger("dummy")
-        second_logger.addHandler(logging.NullHandler())
-
         simulator, conn = get_service(fut.repo_id, port, image_name, second_logger)
 
     except Exception as e:
         fut.test_history.update_exec_stats({"error": repr(e)})
         print("Service error@", fut.repo_id, repr(e))
-        return False, repr(e), fut
+        # Get the log output
+        log_contents = log_stream.getvalue()
+        second_logger.removeHandler(handler)
+        handler.close()
 
+        return False, repr(e), fut, log_contents
+
+    print("Got service successfully")
     try:
-        return self_equiv_futs([fut], conn)
+        log_contents = log_stream.getvalue()
+        second_logger.removeHandler(handler)
+        handler.close()
+
+        print("Running self equiv futs")
+        res = self_equiv_futs([fut], conn)
+        return res
+        #res.append(log_contents)
+        #return res
 
     except Exception as e:
         tb = traceback.format_exc()
@@ -96,15 +95,21 @@ def run_fut_mp(args: tuple[FunctionUnderTest | MethodUnderTest, str, int]) -> tu
         simulator.stop_container()
         conn.close()
 
+    print("Running self equiv futs failed: ", tb)
+    log_contents = log_stream.getvalue()
+    second_logger.removeHandler(handler)
+    handler.close()
+
     fut.test_history.update_exec_stats({"error": tb})
     print(f"Error@{fut.repo_id}:\n{tb}")
-    return False, tb, fut
+    return False, tb, fut, log_contents
 
 
 def run_self_equiv(exec_args, simulator, conn, logger):
     logger.info(f"Running FUTs from {exec_args.testgen_exp_id}.json")
-    print("simulator: ", simulator)
-    assert (simulator != None)
+
+    if simulator is None or conn is None:
+        logger.debug(f"Simulator or connection is currently undefined. This is fine as long as you intended to run the FUTs in parallel. In that case the simulator and connection objects will be created later on")
     futs = load_functions_under_test(TESTGEN_DIR / f"{exec_args.testgen_exp_id}.json")
     logger.info(f"There are {len(futs)} FUTs to run.")
     #futs = Tests(tests={})
@@ -167,9 +172,29 @@ def run_self_equiv(exec_args, simulator, conn, logger):
         i = 0
         logger.info(f"Done running FUTs in parallel.")
 
+        # check if logs/fut_logs exists
+
+        Path("logs/fut_logs").mkdir(parents=True, exist_ok=True)
+        output_log_path = f"logs/fut_logs/{image_name.replace(':', '_')}_test_merged.log"
+
+        with open(output_log_path, "a") as log_file:
+            log_file.write(f" <<<<<<<< Logs for {image_name}:\n")
+
         for x in outputs:
             logger.debug(f"Appending test {i} of {len(futs)} to the testgen_out file...")
+            logger.debug(f"Result of test was {x.result}")
             new_futs.append(x.result[2])  # type: ignore
+            try:
+                if x.result[3]:
+                    logger_data = x.result[3]
+                    # now log all that data to the logger
+                    logger.info(f"FUT Execution Data: {logger_data}")
+                    '''
+                    with open(output_log_path, "a") as log_file:
+                        log_file.write(logger_data)
+                    '''
+            except Exception as e:
+                logger.error(f"Could not retreive FUT execution data for test {i} of {len(futs)}. Traceback: {e}")
             if not x.is_success():
                 logger.error(f"Test {i} of {len(futs)} ran into a service error (result of the FUT is unknown; it could not be executed): {x.exception_tb}")
             i += 1
