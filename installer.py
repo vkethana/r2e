@@ -211,12 +211,47 @@ if __name__ == "__main__":
 
     # Customizable, can add log processing as well
     def prune_docker():
-        print("Pruning Docker images and containers...")
-        subprocess.run(["docker", "system", "prune", "-a", "-f"])
-        print("Docker prune completed.")
+        import subprocess
 
-    # Install repos in 100 piecemeal
-    segment_size = 100
+    def prune_docker():
+        print("Pruning Docker. This takes up to 4 minutes.")
+        try:
+            subprocess.run(
+                ["docker", "system", "prune", "-a", "-f", "--volumes"],
+                timeout=240
+            )
+        except subprocess.TimeoutExpired:
+            print("Docker prune stopped to save time.")
+        
+        print("Cleaning up /var/lib/docker. This takes another 2 minutes.")
+        try:
+            subprocess.run(
+                ["sudo", "-s", "systemctl", "stop", "docker"],
+                timeout=5
+            )
+            subprocess.run(
+                ["sudo", "rm", "-rf", "/var/lib/docker"],
+                timeout=120  # Don't think this is too important but we'll see
+            )
+            subprocess.run(
+                ["sudo", "-s", "systemctl", "start", "docker"],
+                timeout=5
+            )
+            subprocess.run(
+                ["exit"],
+                timeout=3
+            )
+        except subprocess.TimeoutExpired:
+            print("Docker stop/cleanup process stopped to save time.")
+
+        print("Cleaning done, current disk usage at: ")
+
+        subprocess.run(["df", "-h"])
+        
+
+
+    # Install repos in 50 piecemeal
+    segment_size = 50
     for start in range(0, len(urls), segment_size):
         end = min(start + segment_size, len(urls))
         segment_urls = urls[start:end]
@@ -224,11 +259,13 @@ if __name__ == "__main__":
         print(f"Installing segment {start + 1} to {end}...")
 
         # Confirm cleaning process
+        print("CHECK: current disk usage at: ")
+        subprocess.run(["df", "-h"])
         prune_confirm = input("Do you want to prune Docker before continuing? (y/n): ").strip().lower()
         if prune_confirm == 'y':
             prune_docker()
         else:
-            print("Continuing. Previous docker cache saved. Beware of space management.")
+            print("Continuing. Beware of space management.")
 
         # For each segment run this
         outputs = run_tasks_in_parallel(
