@@ -209,7 +209,7 @@ total_fails = 0
 total_succ = 0
 tot_len = len(urls)
 
-# Define a function to prune Docker images and containers
+# Customizable, can add log processing as well
 def prune_docker():
     print("Pruning Docker images and containers...")
     subprocess.run(["docker", "system", "prune", "-a", "-f"])
@@ -228,7 +228,7 @@ for start in range(0, len(urls), segment_size):
     if prune_confirm == 'y':
         prune_docker()
 
-    # Run the installation for the current segment
+    # For each segment run this
     outputs = run_tasks_in_parallel(
         install_repo,
         segment_urls,
@@ -238,7 +238,7 @@ for start in range(0, len(urls), segment_size):
         progress_bar_desc=f"Installing repos {start + 1} to {end}..."
     )
 
-    # Analyze the results for the current segment
+    # Kept the original analysis 
     for i in range(len(segment_urls)):
         url = segment_urls[i]
         x = outputs[i]
