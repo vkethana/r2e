@@ -200,63 +200,62 @@ def signal_handler(sig, frame):
 if __name__ == "__main__":
     # Open up urls.json and read the results as a list
     # Open up urls.json and read the results as a list
-with open(repo_list, "r") as f:
-    urls = json.load(f)
+    with open(repo_list, "r") as f:
+        urls = json.load(f)
 
-print(f"Attempting to install {len(urls)} repos")
+    print(f"Attempting to install {len(urls)} repos")
 
-total_fails = 0
-total_succ = 0
-tot_len = len(urls)
+    total_fails = 0
+    total_succ = 0
+    tot_len = len(urls)
 
-# Customizable, can add log processing as well
-def prune_docker():
-    print("Pruning Docker images and containers...")
-    subprocess.run(["docker", "system", "prune", "-a", "-f"])
-    print("Docker prune completed.")
+    # Customizable, can add log processing as well
+    def prune_docker():
+        print("Pruning Docker images and containers...")
+        subprocess.run(["docker", "system", "prune", "-a", "-f"])
+        print("Docker prune completed.")
 
-# Install repos in 100 piecemeal
-segment_size = 100
-for start in range(0, len(urls), segment_size):
-    end = min(start + segment_size, len(urls))
-    segment_urls = urls[start:end]
+    # Install repos in 100 piecemeal
+    segment_size = 100
+    for start in range(0, len(urls), segment_size):
+        end = min(start + segment_size, len(urls))
+        segment_urls = urls[start:end]
 
-    print(f"Installing segment {start + 1} to {end}...")
+        print(f"Installing segment {start + 1} to {end}...")
 
-    # Confirm cleaning process
-    prune_confirm = input("Do you want to prune Docker before continuing? (y/n): ").strip().lower()
-    if prune_confirm == 'y':
-        prune_docker()
+        # Confirm cleaning process
+        prune_confirm = input("Do you want to prune Docker before continuing? (y/n): ").strip().lower()
+        if prune_confirm == 'y':
+            prune_docker()
 
-    # For each segment run this
-    outputs = run_tasks_in_parallel(
-        install_repo,
-        segment_urls,
-        num_workers=installer_num_workers,
-        timeout_per_task=3000,
-        use_progress_bar=True,
-        progress_bar_desc=f"Installing repos {start + 1} to {end}..."
-    )
+        # For each segment run this
+        outputs = run_tasks_in_parallel(
+            install_repo,
+            segment_urls,
+            num_workers=installer_num_workers,
+            timeout_per_task=3000,
+            use_progress_bar=True,
+            progress_bar_desc=f"Installing repos {start + 1} to {end}..."
+        )
 
-    # Kept the original analysis 
-    for i in range(len(segment_urls)):
-        url = segment_urls[i]
-        x = outputs[i]
-        if x.is_success():
-            print(f"URL {url} was a success")
-            total_succ += 1
-        else:
-            print(f"URL {url} was a failure, or was thrown out due to bad data")
-            total_fails += 1
+        # Kept the original analysis 
+        for i in range(len(segment_urls)):
+            url = segment_urls[i]
+            x = outputs[i]
+            if x.is_success():
+                print(f"URL {url} was a success")
+                total_succ += 1
+            else:
+                print(f"URL {url} was a failure, or was thrown out due to bad data")
+                total_fails += 1
 
-    print(f"Segment {start + 1} to {end} completed.")
-    print(f"Total successes so far: {total_succ}/{tot_len}")
-    print(f"Total failures so far: {total_fails}/{tot_len}")
+        print(f"Segment {start + 1} to {end} completed.")
+        print(f"Total successes so far: {total_succ}/{tot_len}")
+        print(f"Total failures so far: {total_fails}/{tot_len}")
 
     # Pause before starting the next segment
     if end < len(urls):
         input("Press Enter to continue to the next segment...")
-
 
     print(f"Total successes: {total_succ}/{tot_len}")
     print(f"Total failures: {total_fails}/{tot_len}")
