@@ -30,7 +30,7 @@ from r2e.paths import R2E_BUCKET_DIR, TESTGEN_DIR, REPOS_DIR, EXTRACTED_DATA_DIR
 
 openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 client = docker.from_env()
-repo_list = "small.json"
+repo_list = "1300_repos_pt2.json"
 
 oracle_num_workers = 24
 installer_num_workers = 48
@@ -213,45 +213,45 @@ if __name__ == "__main__":
     def prune_docker():
         import subprocess
 
-def prune_docker():
-    print("Pruning Docker. This takes up to 4 minutes.")
-    try:
-        subprocess.run(
-            ["docker", "system", "prune", "-a", "-f", "--volumes"],
-            timeout=240
-        )
-    except subprocess.TimeoutExpired:
-        print("Docker prune stopped to save time.")
-    
-    print("Cleaning up /var/lib/docker. This takes anothern 2 minutes.")
-    try:
-        subprocess.run(
-            ["sudo", "-s", "systemctl", "stop", "docker"],
-            timeout=5
-        )
-        subprocess.run(
-            ["sudo", "rm", "-rf", "/var/lib/docker"],
-            timeout=120  # Don't think this is too important but we'll see
-        )
-        subprocess.run(
-            ["sudo", "-s", "systemctl", "start", "docker"],
-            timeout=5
-        )
-        subprocess.run(
-            ["exit"],
-            timeout=3
-        )
-    except subprocess.TimeoutExpired:
-        print("Docker stop/cleanup process stopped to save time.")
+    def prune_docker():
+        print("Pruning Docker. This takes up to 4 minutes.")
+        try:
+            subprocess.run(
+                ["docker", "system", "prune", "-a", "-f", "--volumes"],
+                timeout=240
+            )
+        except subprocess.TimeoutExpired:
+            print("Docker prune stopped to save time.")
+        
+        print("Cleaning up /var/lib/docker. This takes another 2 minutes.")
+        try:
+            subprocess.run(
+                ["sudo", "-s", "systemctl", "stop", "docker"],
+                timeout=5
+            )
+            subprocess.run(
+                ["sudo", "rm", "-rf", "/var/lib/docker"],
+                timeout=120  # Don't think this is too important but we'll see
+            )
+            subprocess.run(
+                ["sudo", "-s", "systemctl", "start", "docker"],
+                timeout=5
+            )
+            subprocess.run(
+                ["exit"],
+                timeout=3
+            )
+        except subprocess.TimeoutExpired:
+            print("Docker stop/cleanup process stopped to save time.")
 
-    print("Cleaning done, current disk usage at: ")
+        print("Cleaning done, current disk usage at: ")
 
-    subprocess.run(["df", "-h"])
-    
+        subprocess.run(["df", "-h"])
+        
 
 
-    # Install repos in 100 piecemeal
-    segment_size = 100
+    # Install repos in 50 piecemeal
+    segment_size = 50
     for start in range(0, len(urls), segment_size):
         end = min(start + segment_size, len(urls))
         segment_urls = urls[start:end]
