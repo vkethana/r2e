@@ -227,6 +227,8 @@ if __name__ == "__main__":
         prune_confirm = input("Do you want to prune Docker before continuing? (y/n): ").strip().lower()
         if prune_confirm == 'y':
             prune_docker()
+        else:
+            print("Continuing. Previous docker cache saved. Beware of space management.")
 
         # For each segment run this
         outputs = run_tasks_in_parallel(
