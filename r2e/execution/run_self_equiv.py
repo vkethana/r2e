@@ -86,7 +86,7 @@ def run_fut_mp(args: tuple[FunctionUnderTest | MethodUnderTest, str, int]) -> tu
 
         print("Running self equiv futs")
         res = self_equiv_futs([fut], conn)
-        res.append(log_contents)
+        res = (res[0], res[1], res[2], log_contents)
         return res
 
     except Exception as e:

@@ -1,7 +1,7 @@
 import os
 import json
 import random
-from r2e.paths import HOME_DIR, LOGGER_DIR
+from r2e.paths import HOME_DIR, LOGGER_DIR, config
 import docker
 import logging
 import time
@@ -9,6 +9,7 @@ import tarfile
 
 R2E_REPO = HOME_DIR / "r2e"
 logger_dir = LOGGER_DIR
+max_extractions_per_repo = config['max_extractions_per_repo']
 
 def clear_repos_folder():
     # Check if there are any files or folders in ~/buckets/local_repoeval_bucket/repos
@@ -54,7 +55,7 @@ def reduce_data(repo_id):
 
     # Write the trimmed data back to the file
     with open(extracted_file_path, 'w') as f:
-        json.dump(data[0:500], f, indent=4)
+        json.dump(data[0:max_extractions_per_repo], f, indent=4)
 
 def make_equiv_test(repo_id):
     # Generate the equivalence tests
