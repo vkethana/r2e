@@ -26,14 +26,14 @@ from r2e.execution.execute_futs import self_equiv_futs
 from r2e.multiprocess import run_tasks_in_parallel
 
 from installer_utils import *
-from r2e.paths import R2E_BUCKET_DIR, TESTGEN_DIR, REPOS_DIR, EXTRACTED_DATA_DIR, LOCAL_EVAL_DIR, LOGGER_DIR
+from r2e.paths import R2E_BUCKET_DIR, TESTGEN_DIR, REPOS_DIR, EXTRACTED_DATA_DIR, LOCAL_EVAL_DIR, LOGGER_DIR, config
 
 openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 client = docker.from_env()
-repo_list = "1300_repos_pt1.json"
+url_list = config["url_list"]
+oracle_num_workers = config["oracle_num_workers"]
+installer_num_workers = config["installer_num_workers"]
 
-oracle_num_workers = 24
-installer_num_workers = 48
 
 def installation_oracle(simulator, conn, repo_id, logger):
     # This function abstracts the verification command
@@ -165,6 +165,7 @@ def install_repo(url):
         else:
             # Print out failed repo
             logger.info(f"INSTALLATION FAILURE: {repo_id}")
+            # No need to update did_install_pass because we assume repos fail by default
 
 
     except Exception as e:
@@ -203,7 +204,7 @@ def signal_handler(sig, frame):
 if __name__ == "__main__":
     # Open up urls.json and read the results as a list
     # Open up urls.json and read the results as a list
-    with open(repo_list, "r") as f:
+    with open(url_list, "r") as f:
         urls = json.load(f)
 
     print(f"Attempting to install {len(urls)} repos")
@@ -231,7 +232,7 @@ if __name__ == "__main__":
 
     # Install repos in 50 piecemeal
     segment_size = 50
-    for start in range(50, len(urls), segment_size):
+    for start in range(0, len(urls), segment_size):
         end = min(start + segment_size, len(urls))
         segment_urls = urls[start:end]
 
@@ -240,8 +241,7 @@ if __name__ == "__main__":
         # Confirm cleaning process
         print("CHECK: current disk usage at: ")
         subprocess.run(["df", "-h"])
-        #prune_confirm = input("Do you want to prune Docker before continuing? (y/n): ").strip().lower()
-        prune_confirm = 'y'
+        prune_confirm = input("Do you want to prune Docker before continuing? (y/n): ").strip().lower()
         if prune_confirm == 'y':
             prune_docker()
         else:
@@ -278,9 +278,7 @@ if __name__ == "__main__":
 
     # Pause before starting the next segment
     if end < len(urls):
-        #input("Press Enter to continue to the next segment...")
-        print("Continuing to the next segment...")
+        input("Press Enter to continue to the next segment...")
 
     print(f"Total successes: {total_succ}/{tot_len}")
     print(f"Total failures: {total_fails}/{tot_len}")
-
