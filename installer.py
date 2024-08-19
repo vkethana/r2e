@@ -277,8 +277,12 @@ if __name__ == "__main__":
         print(f"Total failures so far: {total_fails}/{tot_len}")
 
     # Pause before starting the next segment
-    if end < len(urls):
-        input("Press Enter to continue to the next segment...")
+    pause_confirm = input("Press Enter to continue to the next segment or 'q' to quit: ").strip().lower()
+    if pause_confirm == 'q':
+        print("Exiting installation process.")
+        sys.exit()
+    else:
+        print("Continuing with the next segment.")
 
     print(f"Total successes: {total_succ}/{tot_len}")
     print(f"Total failures: {total_fails}/{tot_len}")

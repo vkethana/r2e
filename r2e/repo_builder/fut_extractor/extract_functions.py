@@ -13,7 +13,7 @@ class FileFunctionExtractor(FileBaseExtractor):
         function_asts = FileFunctionExtractor.filter_dunder_methods(function_asts)
 
         ## remove functions without docstrings
-        function_asts = FileFunctionExtractor.filter_keep_docstring(function_asts)
+        ## function_asts = FileFunctionExtractor.filter_keep_docstring(function_asts)
 
         ## remove functions without arguments
         function_asts = FileFunctionExtractor.filter_nonzero_arguments(function_asts)
