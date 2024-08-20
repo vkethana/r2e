@@ -1,6 +1,8 @@
 import docker
 import traceback
 
+import fire
+
 import os
 import threading
 import queue
@@ -30,7 +32,6 @@ from r2e.paths import R2E_BUCKET_DIR, TESTGEN_DIR, REPOS_DIR, EXTRACTED_DATA_DIR
 
 #openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 client = docker.from_env()
-url_list = config["url_list"]
 oracle_num_workers = config["oracle_num_workers"]
 installer_num_workers = config["installer_num_workers"]
 
@@ -46,26 +47,6 @@ def installation_oracle(simulator, conn, repo_id, logger):
     # Run the self_equiv function
     run_self_equiv(exec_args, simulator, conn, logger)
     logger.debug("Done running self-equivalence test")
-
-    # This file contains the output of the execution
-    #command = f"python r2e/execution/run_self_equiv.py --testgen_exp_id temp_generate --image_name {image_name} --execution_multiprocess 0"
-    try:
-        logger.debug(f"Checking execution status...")
-        num_passed_tests, num_total_tests = analyze_tests(str(TESTGEN_DIR) + f"/{repo_id}_generate_out.json", logger)
-
-        if num_total_tests == 0:
-            logger.error("BLANK REPO ERROR: Repo should be discarded. It has no Python files to test")
-            return 0
-
-        if num_total_tests < 5:
-            logger.warning("Repo is very small, as it only contains < 5 tests. Consider discarding")
-
-        return num_passed_tests/num_total_tests
-
-    except Exception as e:
-        logger.error(f"Encountered error when checking execution status: {e}")
-        return 0
-
 
 '''
 The below two methods are used to instantiate the docker container and rpyc connection
@@ -99,6 +80,25 @@ def init_docker(repo_name, image_name, logger):
         logger.error(f"Service error -- {repo_name} -- {repr(e)}")
         raise e
 
+def analyze_oracle_output(repo_id, logger):
+    try:
+        logger.debug(f"Checking execution status...")
+        num_passed_tests, num_total_tests = analyze_tests(str(TESTGEN_DIR) + f"/{repo_id}_generate_out.json", logger)
+
+        if num_total_tests == 0:
+            logger.error("BLANK REPO ERROR: Repo should be discarded. It has no Python files to test")
+            return 0
+
+        if num_total_tests < 5:
+            logger.warning("Repo is very small, as it only contains < 5 tests. Consider discarding")
+
+        return num_passed_tests/num_total_tests
+
+    except Exception as e:
+        logger.error(f"Encountered error when checking execution status: {e}")
+        return 0
+
+
 def install_repo(url):
     '''
     Clone, extract tests for, and install the repo at the given URL
@@ -122,10 +122,12 @@ def install_repo(url):
 
     #cloned_repo_exists = os.path.exists(REPOS_DIR / repo_id)
     #extracted_tests_exist = os.path.exists(EXTRACTED_DATA_DIR / f"{repo_id}_extracted.json")
-    #testgen_exists = os.path.exists(TESTGEN_DIR / f"{repo_id}_generate.json")
-    #docker_image_exists = any([image_name in image.tags for image in client.images.list()])
-    testgen_exists = False
-    docker_image_exists = False
+    testgen_exists = os.path.exists(TESTGEN_DIR / f"{repo_id}_generate.json")
+    docker_image_exists = any([image_name in image.tags for image in client.images.list()])
+    #testgen_exists = False
+    #docker_image_exists = False
+    testgen_out_exists = os.path.exists(TESTGEN_DIR / f"{repo_id}_generate_out.json")
+    #testgen_out_exists = False
     #setup_repo_already_done = cloned_repo_exists and extracted_tests_exist and testgen_exists
     # Important: cloned_repo_exists and extracted_tests_exist don't do anything right now. 
     # all that matters is whether the testgen file and docker image exist
@@ -152,16 +154,20 @@ def install_repo(url):
     did_install_pass = False
 
     try:
-        if oracle_num_workers == 0:
-            simulator, conn = init_docker(repo_id, image_name, logger)
+        # We can skip running the oracle if a testgen output already exists
+        if not testgen_out_exists:
+            if oracle_num_workers == 0:
+                simulator, conn = init_docker(repo_id, image_name, logger)
+            else:
+                simulator, conn = None, None
+            installation_oracle(simulator, conn, repo_id, logger)
         else:
-            simulator, conn = None, None
-        #agentic_loop(image_name, repo_name, simulator, conn) # no agentic loop for now
+            logger.info("Skipping Oracle tests because already run before")
 
-        ratio = installation_oracle(simulator, conn, repo_id, logger)
+        ratio = analyze_oracle_output(repo_id, logger)
         logger.info(f"Repo has FUT success ratio of {round(ratio, 3)}")
-
         oracle_result = ratio >= 0.95
+        logger
         if oracle_result:
             # Print out successful repo
             logger.info(f"INSTALLATION SUCCEEDED: {repo_id}")
@@ -170,7 +176,6 @@ def install_repo(url):
             # Print out failed repo
             logger.info(f"INSTALLATION FAILURE: {repo_id}")
             # No need to update did_install_pass because we assume repos fail by default
-
 
     except Exception as e:
         repo_id_str = repo_id if repo_id is not None else "Unknown repo_id"
@@ -205,8 +210,7 @@ def signal_handler(sig, frame):
     # Exit the main process
     sys.exit(0)
 
-if __name__ == "__main__":
-    # Open up urls.json and read the results as a list
+def install_from_url_list(url_list):
     with open(url_list, "r") as f:
         urls = json.load(f)
 
@@ -244,7 +248,12 @@ if __name__ == "__main__":
         # Confirm cleaning process
         print("CHECK: current disk usage at: ")
         subprocess.run(["df", "-h"])
-        prune_confirm = input("Do you want to prune Docker before continuing? (y/n): ").strip().lower()
+        #prune_confirm = input("Do you want to prune Docker before continuing? (y/n): ").strip().lower()
+        if start == 0:
+            prune_confirm = 'n'
+        else:
+            prune_confirm = 'y'
+
         if prune_confirm == 'y':
             prune_docker()
         else:
@@ -255,7 +264,7 @@ if __name__ == "__main__":
             install_repo,
             segment_urls,
             num_workers=installer_num_workers,
-            timeout_per_task=3000,
+            timeout_per_task=1800,
             use_progress_bar=True,
             progress_bar_desc=f"Installing repos {start + 1} to {end}..."
         )
@@ -280,7 +289,8 @@ if __name__ == "__main__":
         print(f"Total failures so far: {total_fails}/{tot_len}")
 
     # Pause before starting the next segment
-    pause_confirm = input("Press Enter to continue to the next segment or 'q' to quit: ").strip().lower()
+    #pause_confirm = input("Press Enter to continue to the next segment or 'q' to quit: ").strip().lower()
+    pause_confirm = ''
     if pause_confirm == 'q':
         print("Exiting installation process.")
         sys.exit()
@@ -289,3 +299,9 @@ if __name__ == "__main__":
 
     print(f"Total successes: {total_succ}/{tot_len}")
     print(f"Total failures: {total_fails}/{tot_len}")
+
+if __name__ == "__main__":
+    '''
+    USAGE: python installer.py --url_list <url_list.json>
+    '''
+    fire.Fire(install_from_url_list)

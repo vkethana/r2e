@@ -85,7 +85,8 @@ def download_github_repos(start_date, end_date, output_file_name, min_stars, max
     print("\nExtracting URLs...")
     extract_urls(csv_file_path, json_file_path)
 
-download_github_repos("2015-01-01", "2017-12-31", "urls", 50, 500, 200)
+#                     start date,   end date,        output filename,  min stars,   max stars,   max urls to output
+download_github_repos("2015-01-01", "2017-12-31",    "urls",           50,         500,         200)
 download_github_repos("2015-01-01", "2017-12-31", "urls", 500, 1000, 100)
 download_github_repos("2015-01-01", "2017-12-31", "urls", 1000, None, 100)
 download_github_repos("2018-01-01", "2019-12-31", "urls", 50, 500, 100)

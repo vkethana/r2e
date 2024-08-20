@@ -1,7 +1,6 @@
 r2e_bucket_dir: buckets/r2e_bucket
 repos_dir: buckets/local_repoeval_bucket/repos
 cache_dir: cache_dir
-url_list: 1300_repos_pt2.json
 oracle_num_workers: 8
 installer_num_workers: 20
 max_extractions_per_repo: 300

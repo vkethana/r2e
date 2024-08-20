@@ -56,6 +56,7 @@ class R2ETestGenerator:
             )
         TESTGEN_DIR.mkdir(parents=True, exist_ok=True)
         write_functions_under_test(futs, TESTGEN_DIR / f"{args.exp_id}_generate.json")
+        print(f"Function under test generated successfully at path {TESTGEN_DIR / f'{args.exp_id}_generate.json'}")
 
     @staticmethod
     def execute(args):
