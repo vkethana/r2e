@@ -238,8 +238,8 @@ def install_from_url_list(url_list):
             print(f"An error occurred: {e}")
 
     # Install repos in 50 piecemeal
-    segment_size = 80
-    for start in range(220, len(urls), segment_size):
+    segment_size = 50
+    for start in range(0, len(urls), segment_size):
         end = min(start + segment_size, len(urls))
         segment_urls = urls[start:end]
 
