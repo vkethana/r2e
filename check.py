@@ -1,11 +1,12 @@
 import os
 
 def count_empty_out_files(directory):
+    directory = os.path.expanduser(directory)
     empty = 0
     t = 0
     for root, _, files in os.walk(directory):
         for file in files:
-            if "_out" in file:  
+            if file.endswith("_out.json"):  
                 t += 1
                 file_path = os.path.join(root, file)
                 with open(file_path, 'r') as f:
