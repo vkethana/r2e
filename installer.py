@@ -236,7 +236,7 @@ if __name__ == "__main__":
             print(f"An error occurred: {e}")
 
     # Install repos in 50 piecemeal
-    segment_size = 50
+    segment_size = 20
     for start in range(0, len(urls), segment_size):
         end = min(start + segment_size, len(urls))
         segment_urls = urls[start:end]
