@@ -6,7 +6,7 @@ import json
 from datetime import datetime
 import os
 
-def download_github_repos(start_date, end_date, output_file_name, min_stars, max_stars):
+def download_github_repos(start_date, end_date, output_file_name, min_stars, max_stars, max_urls):
     # Base URL for SEART API
     BASE_URL = "https://seart-ghs.si.usi.ch/api/r/download/csv"
     
@@ -65,7 +65,7 @@ def download_github_repos(start_date, end_date, output_file_name, min_stars, max
             print(f"Failed to download CSV. Status code: {response.status_code}")
             print(f"Response content: {response.text}")
 
-    def extract_urls(csv_file, json_output_path, max_urls=100):
+    def extract_urls(csv_file, json_output_path):
         names_list = []
         with open(csv_file, mode='r') as csv_file:
             csv_reader = csv.DictReader(csv_file)
@@ -81,16 +81,37 @@ def download_github_repos(start_date, end_date, output_file_name, min_stars, max
     print("Generated URL:")
     print(generate_url())
     print("\nDownloading CSV...")
-    download_csv()
+    #download_csv()
     print("\nExtracting URLs...")
     extract_urls(csv_file_path, json_file_path)
 
-download_github_repos("2015-01-01", "2017-12-31", "urls", 50, 500)
-download_github_repos("2015-01-01", "2017-12-31", "urls", 500, 1000)
-download_github_repos("2015-01-01", "2017-12-31", "urls", 1000, None)
-download_github_repos("2018-01-01", "2019-12-31", "urls", 50, 500)
-download_github_repos("2018-01-01", "2019-12-31", "urls", 500, 1000)
-download_github_repos("2018-01-01", "2019-12-31", "urls", 1000, None)
-download_github_repos("2020-01-01", None, "urls", 50, 500)
-download_github_repos("2020-01-01", None, "urls", 500, 1000)
-download_github_repos("2020-01-01", None, "urls", 1000, None)
+download_github_repos("2015-01-01", "2017-12-31", "urls", 50, 500, 200)
+download_github_repos("2015-01-01", "2017-12-31", "urls", 500, 1000, 100)
+download_github_repos("2015-01-01", "2017-12-31", "urls", 1000, None, 100)
+download_github_repos("2018-01-01", "2019-12-31", "urls", 50, 500, 100)
+download_github_repos("2018-01-01", "2019-12-31", "urls", 500, 1000, 100)
+download_github_repos("2018-01-01", "2019-12-31", "urls", 1000, None, 100)
+download_github_repos("2020-01-01", None, "urls", 50, 500, 300)
+download_github_repos("2020-01-01", None, "urls", 500, 1000, 200)
+download_github_repos("2020-01-01", None, "urls", 1000, None, 100)
+
+# Merge the results into a single file
+all_urls = []
+for file in os.listdir("seart"):
+    if file.endswith(".json"):
+        with open(os.path.join("seart", file), "r") as f:
+            all_urls.extend(json.load(f))
+
+num_urls = len(all_urls)
+# Split into two files
+
+first_half = "1300_repos_pt1.json"
+with open(first_half, "w") as f:
+    json.dump(all_urls[:num_urls//2], f, indent=4)
+print("Extracted", num_urls//2, "URLs to", first_half)
+
+second_half = "1300_repos_pt2.json"
+with open(second_half, "w") as f:
+    json.dump(all_urls[num_urls//2:], f, indent=4)
+
+print("Extracted", num_urls//2, "URLs to", second_half)
