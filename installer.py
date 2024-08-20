@@ -234,8 +234,8 @@ if __name__ == "__main__":
             print(f"An error occurred: {e}")
 
     # Install repos in 50 piecemeal
-    segment_size = 20
-    for start in range(0, len(urls), segment_size):
+    segment_size = 80
+    for start in range(220, len(urls), segment_size):
         end = min(start + segment_size, len(urls))
         segment_urls = urls[start:end]
 
@@ -279,13 +279,15 @@ if __name__ == "__main__":
         print(f"Total successes so far: {total_succ}/{tot_len}")
         print(f"Total failures so far: {total_fails}/{tot_len}")
 
-    # Pause before starting the next segment
-    pause_confirm = input("Press Enter to continue to the next segment or 'q' to quit: ").strip().lower()
-    if pause_confirm == 'q':
-        print("Exiting installation process.")
-        sys.exit()
-    else:
-        print("Continuing with the next segment.")
+        # Pause before starting the next segment
+        pause_confirm = input("Press Enter to continue to the next segment or 'q' to quit: ").strip().lower()
+        if pause_confirm == 'q':
+            print("Exiting installation process.")
+            sys.exit()
+        else:
+            print("Continuing with the next segment.")
 
-    print(f"Total successes: {total_succ}/{tot_len}")
-    print(f"Total failures: {total_fails}/{tot_len}")
+        print(f"Total successes: {total_succ}/{tot_len}")
+        print(f"Total failures: {total_fails}/{tot_len}")
+
+    
