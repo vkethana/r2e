@@ -13,20 +13,14 @@ def download_github_repos(start_date, end_date, output_file_name, min_stars, max
     # Validate date inputs
     try:
         datetime.strptime(start_date, "%Y-%m-%d")
-        datetime.strptime(end_date, "%Y-%m-%d")
+        if end_date:
+            datetime.strptime(end_date, "%Y-%m-%d")
     except ValueError:
         raise ValueError("Incorrect date format, should be YYYY-MM-DD")
 
     # Create seart folder if it doesn't exist
     seart_folder = "seart"
     os.makedirs(seart_folder, exist_ok=True)
-
-    # Generate file names with date range
-    csv_file_name = f"seart_results_{start_date}_to_{end_date}.csv"
-    json_file_name = f"{output_file_name}_{start_date}_to_{end_date}.json"
-    
-    csv_file_path = os.path.join(seart_folder, csv_file_name)
-    json_file_path = os.path.join(seart_folder, json_file_name)
 
     # Parameters for the API request
     params = {
@@ -41,6 +35,16 @@ def download_github_repos(start_date, end_date, output_file_name, min_stars, max
         params["starsMax"] = max_stars
     if end_date:
         params["createdMax"] = end_date
+
+    # Generate file names with date range
+    if not end_date:
+        end_date = "now"
+    csv_file_name = f"seart_results_{start_date}_to_{end_date}_min_stars_{min_stars}.csv"
+    json_file_name = f"{output_file_name}_{start_date}_to_{end_date}_min_stars_{min_stars}.json"
+
+    csv_file_path = os.path.join(seart_folder, csv_file_name)
+    json_file_path = os.path.join(seart_folder, json_file_name)
+
 
     def generate_url():
         """Generate the full URL with query parameters."""
