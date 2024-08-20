@@ -123,15 +123,20 @@ def install_repo(url):
 
     #cloned_repo_exists = os.path.exists(REPOS_DIR / repo_id)
     #extracted_tests_exist = os.path.exists(EXTRACTED_DATA_DIR / f"{repo_id}_extracted.json")
-    testgen_exists = os.path.exists(TESTGEN_DIR / f"{repo_id}_generate.json")
-    docker_image_exists = any([image_name in image.tags for image in client.images.list()])
+    #testgen_exists = os.path.exists(TESTGEN_DIR / f"{repo_id}_generate.json")
+    #docker_image_exists = any([image_name in image.tags for image in client.images.list()])
+    testgen_exists = False
+    docker_image_exists = False
     #setup_repo_already_done = cloned_repo_exists and extracted_tests_exist and testgen_exists
     # Important: cloned_repo_exists and extracted_tests_exist don't do anything right now. 
     # all that matters is whether the testgen file and docker image exist
 
     if not testgen_exists:
-        setup_repo(url, repo_id, logger)
+        success = setup_repo(url, repo_id, logger)
         logger.info("Testgen file not found. Running setup_repo...")
+        if not success:
+            logger.info(f"INSTALLATION FAILURE: {repo_id}")
+            return False
     else:
         logger.info("Skipping repository setup")
 

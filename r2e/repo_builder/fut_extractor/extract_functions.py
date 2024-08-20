@@ -1,6 +1,7 @@
 import ast
 
 from r2e.repo_builder.fut_extractor.extract_base import FileBaseExtractor
+from r2e.paths import config
 
 
 class FileFunctionExtractor(FileBaseExtractor):
@@ -13,8 +14,8 @@ class FileFunctionExtractor(FileBaseExtractor):
         function_asts = FileFunctionExtractor.filter_dunder_methods(function_asts)
 
         ## remove functions without docstrings
-        if not config['extract_functions_without_docstring']:
-            function_asts = FileFunctionExtractor.filter_keep_docstring(function_asts)
+        #if not config['extract_functions_without_docstring']:
+        #function_asts = FileFunctionExtractor.filter_keep_docstring(function_asts)
 
         ## remove functions without arguments
         function_asts = FileFunctionExtractor.filter_nonzero_arguments(function_asts)

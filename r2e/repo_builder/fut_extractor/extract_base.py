@@ -87,7 +87,7 @@ class FileBaseExtractor:
         return [
             function_ast
             for function_ast in function_asts
-            if FileBaseExtractor.get_docstring_tokens_lowered(function_ast).isdisjoint(
+            if FileBaseExtractor.has_docstring(function_ast) and FileBaseExtractor.get_docstring_tokens_lowered(function_ast).isdisjoint(
                 BAD_DOC_SUBSTRINGS
             )
         ]

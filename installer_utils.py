@@ -1,7 +1,7 @@
 import os
 import json
 import random
-from r2e.paths import HOME_DIR, LOGGER_DIR, config
+from r2e.paths import HOME_DIR, LOGGER_DIR, config, TESTGEN_DIR
 import docker
 import logging
 import time
@@ -52,15 +52,26 @@ def reduce_data(repo_id):
 
     if len(data) < 1:
         print("WARNING: No data found in extracted file")
+        return False
 
     # Write the trimmed data back to the file
     with open(extracted_file_path, 'w') as f:
         json.dump(data[0:max_extractions_per_repo], f, indent=4)
+    return True
 
 def make_equiv_test(repo_id):
     # Generate the equivalence tests
     command = f"python r2e/generators/testgen/generate.py -i {repo_id}_extracted.json --multiprocess 16 --exp_id {repo_id}"
     os.system(command)
+
+    # Check that the equivalence tests were generated
+    equiv_test = TESTGEN_DIR / f"{repo_id}_generate.json"
+
+    # Make sure the JSON file is NOT empty
+    with open(equiv_test, 'r') as f:
+        data = json.load(f)
+
+    return len(data)
 
 def setup_repo(url,repo_id, logger):
     logger.debug("Cloning new repo...")
@@ -68,9 +79,19 @@ def setup_repo(url,repo_id, logger):
     logger.debug("Extracting tests...")
     extract_data(repo_id)
     logger.debug("Reducing number of tests...")
-    reduce_data(repo_id)
+    if not reduce_data(repo_id):
+        logger.error("BLANK REPO ERROR: Repo has no tests, terminating installation early.")
+        return False
+
     logger.debug("Generating equivalence tests...")
-    make_equiv_test(repo_id)
+    num_equiv_tests = make_equiv_test(repo_id)
+    if num_equiv_tests == 0:
+        logger.error("BLANK REPO ERROR: Repo has no equivalence tests, terminating installation early.")
+        return False
+    else:
+        logger.info(f"Successfully generated {num_equiv_tests} equivalence tests")
+
+    return True
 
 def setup_container(image_name, repo_id, logger):
     logger.debug("Building dockerfile...")

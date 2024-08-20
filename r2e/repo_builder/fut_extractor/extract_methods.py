@@ -15,8 +15,8 @@ class FileMethodExtractor(FileBaseExtractor):
         method_asts = FileMethodExtractor.filter_dunder_methods(method_asts)
 
         ## remove methods without docstrings
-        if not config['extract_methods_without_docstring']:
-            method_asts = FileMethodExtractor.filter_keep_docstring(method_asts)
+        #if not config['extract_methods_without_docstring']:
+        method_asts = FileMethodExtractor.filter_keep_docstring(method_asts)
 
         ## remove methods with literal returns
         method_asts = FileMethodExtractor.filter_literal_returns(method_asts)
