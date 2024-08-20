@@ -2,7 +2,7 @@ r2e_bucket_dir: buckets/r2e_bucket
 repos_dir: buckets/local_repoeval_bucket/repos
 cache_dir: cache_dir
 oracle_num_workers: 8
-installer_num_workers: 20
+installer_num_workers: 10
 max_extractions_per_repo: 300
 extract_functions_without_docstring: True
 extract_methods_without_docstring: True
