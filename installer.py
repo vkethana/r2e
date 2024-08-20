@@ -28,12 +28,11 @@ from r2e.multiprocess import run_tasks_in_parallel
 from installer_utils import *
 from r2e.paths import R2E_BUCKET_DIR, TESTGEN_DIR, REPOS_DIR, EXTRACTED_DATA_DIR, LOCAL_EVAL_DIR, LOGGER_DIR, config
 
-openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+#openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 client = docker.from_env()
 url_list = config["url_list"]
 oracle_num_workers = config["oracle_num_workers"]
 installer_num_workers = config["installer_num_workers"]
-
 
 def installation_oracle(simulator, conn, repo_id, logger):
     # This function abstracts the verification command
@@ -132,8 +131,8 @@ def install_repo(url):
     # all that matters is whether the testgen file and docker image exist
 
     if not testgen_exists:
-        success = setup_repo(url, repo_id, logger)
         logger.info("Testgen file not found. Running setup_repo...")
+        success = setup_repo(url, repo_id, logger)
         if not success:
             logger.info(f"INSTALLATION FAILURE: {repo_id}")
             return False
@@ -207,7 +206,6 @@ def signal_handler(sig, frame):
     sys.exit(0)
 
 if __name__ == "__main__":
-    # Open up urls.json and read the results as a list
     # Open up urls.json and read the results as a list
     with open(url_list, "r") as f:
         urls = json.load(f)
