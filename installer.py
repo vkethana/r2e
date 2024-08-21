@@ -239,22 +239,21 @@ def install_from_url_list(url_list, prune_timeout):
         try:
             print("Pruning Docker.")
             proc = subprocess.Popen(["docker", "system", "prune", "-a", "-f", "--volumes"], stdout=subprocess.PIPE)
-            t = 300
             try:
                 stdout = proc.communicate(timeout=timeout)
                 return stdout
             except subprocess.TimeoutExpired:
                 proc.kill()
                 stdout = proc.communicate()
-                print(f"Pruning process killed due to timeout of {t}.")
+                print(f"Pruning process killed due to timeout of {timeout}.")
                 return stdout
         except Exception as e:
             print(f"An error occurred: {e}")
 
     # Install repos in 50 piecemeal
-    segment_size = 100
+    segment_size = 50
 
-    for start in range(300, len(urls), segment_size):
+    for start in range(500, len(urls), segment_size):
         end = min(start + segment_size, len(urls))
         segment_urls = urls[start:end]
 
@@ -269,8 +268,11 @@ def install_from_url_list(url_list, prune_timeout):
             if prune_confirm == 'y':
                 print(f"Start pruning with timeout: {prune_timeout}\n")
                 prune_docker(timeout=prune_timeout)
+            elif prune_confirm == 'n':
+                print("Quitting installation.\n")
+                sys.exit()
             else:
-                print("Skip pruning. Beware of space management.\n")
+                print("Skipping pruning to continue. \n")
         else:
             print("Disk usage below 50%. Continuing.\n")
 
