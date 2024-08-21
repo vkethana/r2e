@@ -184,7 +184,7 @@ def install_repo(url):
         logger
         if oracle_result:
             # Print out successful repo
-            logger.info(f"INSTALLATION SUCCEEDED: {repo_id}")
+            logger.info(f"INSTALLATION SUCCEEDED: {repo_id}. SUCCESS RATIO: {ratio}")
             did_install_pass = True
         else:
             # Print out failed repo

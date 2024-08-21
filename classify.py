@@ -15,21 +15,35 @@ def keyword_in_log(log_path, keyword):
         print(f"[ERROR] The log file '{log_path}' does not exist.")
         return False
 
+    
     try:
         result = subprocess.run(['grep', '-q', keyword, log_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        return result.returncode == 0
+        stdout_decoded = result.stdout.decode('utf-8')
+        if result.returncode == 0:
+            if keyword == "INSTALLATION SUCCEEDED":
+                match = re.search(r'SUCCESS RATIO: (\d+\.\d+)', stdout_decoded)
+                success_ratio = float(match.group(1)) if match else None
+                return True, success_ratio
+            return True, None
+        return False, None
     except FileNotFoundError:
         print("[INFO] Grep not found, using Python fallback.")
 
+    success_ratio = None
     try:
         with open(log_path, 'r') as file:
             for line in file:
                 if keyword in line:
-                    return True
+                    if keyword == "INSTALLATION SUCCEEDED":
+                        match = re.search(r'SUCCESS RATIO: (\d+\.\d+)', line)
+                        if match:
+                            success_ratio = float(match.group(1))
+                    return True, success_ratio
+                return True, success_ratio
     except Exception as e:
         print(f"[ERROR] Error reading file: {e}")
     
-    return False
+    return False, None
 
 # Function to parse log files and classify small errors
 def parse_log_file(file_path):
@@ -53,6 +67,7 @@ def process_logs_in_directory(log_directory):
     num_did_not_finish = 0
     failed_repos = []
     error_summary = defaultdict(list)
+    success_dict = {}
 
     if not os.path.isdir(log_directory):
         print(f"[ERROR] The directory '{log_directory}' does not exist.")
@@ -63,20 +78,24 @@ def process_logs_in_directory(log_directory):
         file_path = os.path.join(log_directory, filename)
         
         if not os.path.isdir(file_path):
-            print(f"[DEBUG] Processing log file: {file_path}")
+            #print(f"[DEBUG] Processing log file: {file_path}")
 
-            if keyword_in_log(file_path, "INSTALLATION SUCCEEDED"):
-                print(f"[INFO] Install success detected in {file_path}")
+            succeeded, success_ratio = keyword_in_log(file_path, "INSTALLATION SUCCEEDED")
+
+            if succeeded:
+                #print(f"[INFO] Install success detected in {file_path}")
                 num_success += 1
-            elif keyword_in_log(file_path, "BLANK REPO ERROR"):
-                print(f"[INFO] Blank repo error detected in {file_path}")
+                if success_ratio != None:
+                    success_dict[file_path] = success_ratio
+            elif keyword_in_log(file_path, "BLANK REPO ERROR")[0]:
+                #print(f"[INFO] Blank repo error detected in {file_path}")
                 num_blank += 1
-            elif keyword_in_log(file_path, "INSTALLATION FAILURE"):
-                print(f"[INFO] Install failure error detected in {file_path}")
+            elif keyword_in_log(file_path, "INSTALLATION FAILURE")[0]:
+                #print(f"[INFO] Install failure error detected in {file_path}")
                 failed_repos.append(file_path)
                 num_failures += 1
             else:
-                print(f"[DEBUG] No relevant keywords found in {file_path}")
+                #print(f"[DEBUG] No relevant keywords found in {file_path}")
                 num_did_not_finish += 1
                 num_failures += 1
 
@@ -95,7 +114,8 @@ def process_logs_in_directory(log_directory):
         "blanks": num_blank,
         "num_did_not_finish": num_did_not_finish,
         "successes": num_success,
-        "success rate": round(num_success / (num_success + num_failures), 2) if (num_success + num_failures) > 0 else 0
+        "success rate": round(num_success / (num_success + num_failures), 2) if (num_success + num_failures) > 0 else 0,
+        "success distribution": success_dict
     }
 
     # Generate the final summary
