@@ -2,7 +2,7 @@ import docker
 import traceback
 
 import fire
-
+import re
 import os
 import threading
 import queue
@@ -34,6 +34,20 @@ from r2e.paths import R2E_BUCKET_DIR, TESTGEN_DIR, REPOS_DIR, EXTRACTED_DATA_DIR
 client = docker.from_env()
 oracle_num_workers = config["oracle_num_workers"]
 installer_num_workers = config["installer_num_workers"]
+
+#Check the disk usage of /dev/root
+def check_disk_usage():
+    """Check the disk usage of /dev/root"""
+    try:
+        result = subprocess.run(["df", "-h"], stdout=subprocess.PIPE, text=True)
+        output = result.stdout
+        for line in output.splitlines():
+            if '/dev/root' in line:
+                used = int(re.search(r'(\d+)%', line).group(1))
+                return used
+    except Exception as e:
+        print(f"An error occurred while checking disk usage: {e}")
+        return None
 
 def installation_oracle(simulator, conn, repo_id, logger):
     # This function abstracts the verification command
@@ -210,7 +224,7 @@ def signal_handler(sig, frame):
     # Exit the main process
     sys.exit(0)
 
-def install_from_url_list(url_list):
+def install_from_url_list(url_list, prune_timeout):
     with open(url_list, "r") as f:
         urls = json.load(f)
 
@@ -220,14 +234,14 @@ def install_from_url_list(url_list):
     total_succ = 0
     tot_len = len(urls)
 
-    def prune_docker():
+    def prune_docker(timeout=240):
+        # Default timeout of 4 minutes
         try:
             print("Pruning Docker.")
-            # 4 minutes timeout
             proc = subprocess.Popen(["docker", "system", "prune", "-a", "-f", "--volumes"], stdout=subprocess.PIPE)
-            t = 240
+            t = 300
             try:
-                stdout = proc.communicate(timeout=t)
+                stdout = proc.communicate(timeout=timeout)
                 return stdout
             except subprocess.TimeoutExpired:
                 proc.kill()
@@ -238,26 +252,28 @@ def install_from_url_list(url_list):
             print(f"An error occurred: {e}")
 
     # Install repos in 50 piecemeal
-    segment_size = 50
-    for start in range(0, len(urls), segment_size):
+    segment_size = 100
+
+    for start in range(300, len(urls), segment_size):
         end = min(start + segment_size, len(urls))
         segment_urls = urls[start:end]
 
         print(f"Installing segment {start + 1} to {end}...")
 
-        # Confirm cleaning process
-        print("CHECK: current disk usage at: ")
-        subprocess.run(["df", "-h"])
-        #prune_confirm = input("Do you want to prune Docker before continuing? (y/n): ").strip().lower()
-        if start == 0:
-            prune_confirm = 'n'
-        else:
-            prune_confirm = 'y'
+        used = check_disk_usage()
+        print(f"[INFO] Current /dev/root disk usage: {used}% \n")
 
-        if prune_confirm == 'y':
-            prune_docker()
+        # Confirm cleaning process at 50% usage cutoff
+        if used > 50:
+            prune_confirm = input("Do you want to prune Docker before continuing? (y/n): ").strip().lower()
+            if prune_confirm == 'y':
+                print(f"Start pruning with timeout: {prune_timeout}\n")
+                prune_docker(timeout=prune_timeout)
+            else:
+                print("Skip pruning. Beware of space management.\n")
         else:
-            print("Skip pruning. Beware of space management.")
+            print("Disk usage below 50%. Continuing.\n")
+
 
         # For each segment run this
         outputs = run_tasks_in_parallel(
@@ -268,8 +284,7 @@ def install_from_url_list(url_list):
             use_progress_bar=True,
             progress_bar_desc=f"Installing repos {start + 1} to {end}..."
         )
-
-        # Kept the original analysis 
+ 
         for i in range(len(segment_urls)):
             url = segment_urls[i]
             x = outputs[i]
@@ -290,6 +305,6 @@ def install_from_url_list(url_list):
 
 if __name__ == "__main__":
     '''
-    USAGE: python installer.py --url_list <url_list.json>
+    USAGE: python installer.py --url_list <url_list.json> --prune_timeout <t_seconds>
     '''
     fire.Fire(install_from_url_list)

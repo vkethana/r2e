@@ -105,7 +105,13 @@ def process_logs_in_directory(log_directory):
     }
 
     # Print the final summary in JSON-like format
-    print(json.dumps(final_summary, indent=4))
+    # print(json.dumps(final_summary, indent=4))
+
+    # Write the final summary to a JSON file
+    with open('sum.json', 'w') as json_file:
+        json.dump(final_summary, json_file, indent=4)
+
+    print("[INFO] Summary written to sum.json")
 
 if __name__ == "__main__":
     # Ensure correct usage
