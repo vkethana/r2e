@@ -65,6 +65,7 @@ def process_logs_in_directory(log_directory):
     num_blank = 0
     num_success = 0
     num_did_not_finish = 0
+    num_import_error = 0
     failed_repos = []
     error_summary = defaultdict(list)
     success_dict = {}
@@ -91,9 +92,10 @@ def process_logs_in_directory(log_directory):
                 #print(f"[INFO] Blank repo error detected in {file_path}")
                 num_blank += 1
             elif keyword_in_log(file_path, "INSTALLATION FAILURE")[0]:
-                #print(f"[INFO] Install failure error detected in {file_path}")
                 failed_repos.append(file_path)
                 num_failures += 1
+                if keyword_in_log(file_path, "Small Error: ImportError")[0]:
+                    num_import_error += 1
             else:
                 #print(f"[DEBUG] No relevant keywords found in {file_path}")
                 num_did_not_finish += 1
@@ -112,10 +114,12 @@ def process_logs_in_directory(log_directory):
         "total": num_success + num_failures,
         "fails": num_failures,
         "blanks": num_blank,
+        "num_import_error": num_import_error,
         "num_did_not_finish": num_did_not_finish,
         "successes": num_success,
-        "success rate": round(num_success / (num_success + num_failures), 2) if (num_success + num_failures) > 0 else 0,
-        "success distribution": success_dict
+        "success_rate": round(num_success / (num_success + num_failures), 2) if (num_success + num_failures) > 0 else 0,
+        "success_rate_exclude_import_errors": round(num_success / (num_success + num_failures - num_import_error), 2) if (num_success + num_failures - num_import_error) > 0 else 0,
+        "success_distribution": success_dict
     }
 
     # Generate the final summary

@@ -24,6 +24,8 @@ COPY . /repos
 
 WORKDIR /install_code
 
-RUN pip install -r requirements.txt
+# Install UV
+RUN pip install uv
+RUN uv pip install -r requirements.txt
 
 RUN apt-get install -y vim
